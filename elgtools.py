@@ -8,6 +8,7 @@ import matplotlib.gridspec as gsc
 from scipy.interpolate import interp1d
 import numpy as np
 import jplus
+import misc 
 
 
 def make_sel_sigma(gal_jplus,jarr):
@@ -97,79 +98,72 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
     
     
     return gal_cand
-        
+ 
+def zline(lam_line, wf,tf):  # finds the redshift range of a line in a given filter 
+  w10 = misc.quantile(wf, tf, 0.1)
+  w90 = misc.quantile(wf, tf, 0.9)
+
+  z10 = (w10 - lam_line) / lam_line
+  z90 = (w90 - lam_line) / lam_line
+
+  return [z10,z90]
+  
+
 
 def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec'):
 
-  zmax = 1.1
-  zmin = 0.0
-  nz = 1
-  zarr = np.linspace(zmin,zmax,nz)
-  zbin = zarr[1] - zarr[0]
-  medr_j = np.zeros(nz)
-  medi_j = np.zeros(nz)
-  rjp1090 = np.zeros([nz,2])
-  ijp1090 = np.zeros([nz,2])
-  #print zbin
-  print 'zarr Ngals '
-  for i in range(nz):
-      iz = ((gal_sdss[zcoord] > zarr[i]-zbin/2.) & (gal_sdss[zcoord] < zarr[i]+zbin/2.))
-      #print len(np.where(iz == 1)[0])
-      sdss_iz = jplus.tools.select_object(gal_sdss,iz)
-      d2,ind2 = jplus.tools.crossmatch_angular(sdss_iz['coords'],gal_jplus['coords'],max_distance=3e-4)
-      m2 = ((d2 != np.inf))
-      jplus_iz = jplus.tools.select_object(gal_jplus,m2)
-      r_j = jplus_iz['rJAVA'][:,0] - jplus_iz['J0660'][:,0]
-      i_j = jplus_iz['iJAVA'][:,0] - jplus_iz['J0660'][:,0]
-      zax = np.zeros(len(r_j))
-      zax[:] = zarr[i]
-      lab = 'SDSS Spec x J-PLUS'
-      plt.plot(r_j,i_j,'.',color='gray',label = lab if i == 0 else '')
-      
-      print "%.2f %d " % (zarr[i],len(r_j))
-      if len(r_j) < 3:
-          print r_j
+  d2,ind2 = jplus.tools.crossmatch_angular(gal_sdss['coords'],gal_jplus['coords'],max_distance=3e-4)
+  m2 = ((d2 != np.inf))
+  jplus_iz = jplus.tools.select_object(gal_jplus,m2)
+  r_j = jplus_iz['rJAVA'][:,0] - jplus_iz['J0660'][:,0]
+  i_j = jplus_iz['iJAVA'][:,0] - jplus_iz['J0660'][:,0]
+  zax = gal_sdss['zspec']
 
-      
+  plt.figure('colcol')
+
+  lab = 'SDSS Spec in J-PLUS'
+  plt.plot(r_j,i_j,'.',color='gray',label = lab)
+  
   plt.ylim([-0.5,2.5])
   plt.xlim([-0.5,2.5])
 
-  plt.xlabel('rJAVA - J0660')
-  plt.ylabel('iJAVA - J0660')
+  plt.xlabel('rJAVA - J0660',fontsize=20)
+  plt.ylabel('iJAVA - J0660',fontsize=20)
 
   # Now add composite spectra
 
   spec_elg = jplus.datasets.fetch_eboss_elg_composite()
+  
+  
   zarr = [0.005,0.8, 0.356, 0.30]
   w0   = [6560., 3727., 5007., 4860.0]
-  nz = len(zarr)
+  wname = [r'H\alpha',r'[OII]',r'[OIII]',r'H\beta']
   new = 10
   ewarr = np.logspace(0.5,3.0,num=new)
-  color = plt.cm.coolwarm(np.linspace(0.1,0.9,nz))
+  color = 'blue'
 
   j = 1
-  for iz in range(nz):
-      ztrack = np.zeros([new,2])
-      for iew in range(new):    
-          i = ewarr[iew]
-          specline = jplus.datasets.add_line_to_spec(spec_elg,EW=i,obsframe=True,wavelength0=w0[iz])
-          specw = specline['w'] * (1.0+zarr[iz])
-          specc = {'w':specw,'flux':specline['flux']}
-          conv_mags = jplus.datasets.compute_jplus_photometry_singlespec(specc)
-          r_j = conv_mags['rJAVA'] - conv_mags['J0660']
-          i_j = conv_mags['iJAVA'] - conv_mags['J0660']
-          g_r = conv_mags['gJAVA'] - conv_mags['rJAVA']
-          ztrack[iew,0] = r_j
-          ztrack[iew,1] = i_j
-          
-      plt.plot(ztrack[:,0],ztrack[:,1],color=color[iz],
-               label='z = %.2f' % (zarr[iz]),linewidth=3)
-      print ztrack
+
+  ztrack = np.zeros([new,2])
+  for iew in range(new):    
+      i = ewarr[iew]
+      specline = jplus.datasets.add_line_to_spec(spec_elg,EW=i,obsframe=True,wavelength0=w0[0])
+      specc = {'w':specline['w'],'flux':specline['flux']}
+      conv_mags = jplus.datasets.compute_jplus_photometry_singlespec(specc)
+      r_j = conv_mags['rJAVA'] - conv_mags['J0660']
+      i_j = conv_mags['iJAVA'] - conv_mags['J0660']
+      g_r = conv_mags['gJAVA'] - conv_mags['rJAVA']
+      ztrack[iew,0] = r_j
+      ztrack[iew,1] = i_j
+      
+  plt.plot(ztrack[:,0],ztrack[:,1],color=color)
               
 
   ijlim = 0.6
   rjlim = 0.0
 
+  
+  
 
   plt.plot([ijlim,3],[ijlim,ijlim],linewidth=4,color='black')        
   plt.plot([rjlim,rjlim],[ijlim,3],linewidth=4,color='black')        

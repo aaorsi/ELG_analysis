@@ -1,6 +1,11 @@
 
+jplusdir = '/home/CEFCA/aaorsi/work/j-plus/'
+
 import sys
-sys.path.append('/home/CEFCA/aaorsi/work/j-plus/')
+sys.path.append(jplusdir)
+import os
+os.chdir(jplusdir)
+
 import jplus
 import numpy as np
 import matplotlib
@@ -12,6 +17,7 @@ jplus.plotting.setup_text_plots(fontsize=10,usetex=True)
 spec_elg = jplus.datasets.fetch_eboss_elg_composite()
 matplotlib.rcParams['figure.figsize'] = (12,10)
 
+
 #### Options #####
 
 AddedPlots      = False  # Plot added stuff
@@ -22,7 +28,7 @@ ZpLephare       = True  # Recalibrate zero points using Lephare
 FindXMatches    = True # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
 UseSDSSBB       = True  # Use SDSS Broad band filters instead of J-PLUS
 PlotColCol      = True # Plot the colour-colour selection of ELG candidates
-PlotColMags     = True # Plot color-magnitude diagrams
+PlotColMags     = False # Plot color-magnitude diagrams
 MakeELGsel      = True  # Create an ELG selection
 GetPhotoz       = False # Get photometric redshifts with LePhare
 ComputeTwoP     = False  # Compute the angular correlation function of the catalogue
@@ -101,8 +107,7 @@ if PlotColCol:
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus)
 
 if MakeELGsel:
-  icand, jarr, sigma2_col_rj,sigma2_col_ij = elg.selection(gal_jplus,ijlim = ijlim, rjlim = rjlim)  
-  gal_elgs = jplus.tools.select_object(gal_jplus,icand)
+  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim)  
 
   print 'Total number of OII emitter candidates: %d' % len(icand)
 
