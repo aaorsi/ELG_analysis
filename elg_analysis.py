@@ -28,7 +28,7 @@ ZpLephare       = True  # Recalibrate zero points using Lephare
 FindXMatches    = True # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
 UseSDSSBB       = True  # Use SDSS Broad band filters instead of J-PLUS
 PlotColCol      = True # Plot the colour-colour selection of ELG candidates
-PlotColMags     = False # Plot color-magnitude diagrams
+PlotColMags     = True # Plot color-magnitude diagrams
 MakeELGsel      = True  # Create an ELG selection
 GetPhotoz       = False # Get photometric redshifts with LePhare
 ComputeTwoP     = False  # Compute the angular correlation function of the catalogue
@@ -109,7 +109,9 @@ if PlotColCol:
 if MakeELGsel:
   gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim)  
 
-  print 'Total number of OII emitter candidates: %d' % len(icand)
+  nelgs= len(gal_elgs['tile_id'])
+  print 'Total number of OII emitter candidates: %d' % nelgs
+
 
 if PlotColMags:       
   gs = gsc.GridSpec(2,2)
