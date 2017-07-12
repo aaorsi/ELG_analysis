@@ -1,4 +1,6 @@
 
+import sys
+sys.path.append('/home/CEFCA/aaorsi/work/j-plus/')
 import jplus
 import numpy as np
 import matplotlib

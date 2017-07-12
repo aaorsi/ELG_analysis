@@ -1,5 +1,7 @@
 # Many routines to analyse ELGs with J-PLUS datas 
 
+import sys
+sys.path.append('/home/CEFCA/aaorsi/work/j-plus/')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gsc
 
@@ -96,30 +98,6 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
     
     return gal_cand
         
-
-  
-  # Selection of candidates:
-
-  jmax  = 19.0 # to avoid stars and/or obvious z=0 interlopers?
-  i_j8min = 0.0   # Objects should also have excess in the J0861 filter, since there's contribution from Hbeta(4860), OII4959 and OIII5007
-
-  
-  print 'J0660 magnitude limit for a SNR %f = %f' % (snr_limit,jmin)
-  
-  # This selection makes a cut in J0660 to ensure that the median SNR > snr_limit
-  
-  #icand = np.where((j < jmin) & (rj > rjmin) & (ij > ijmin) & (j > jmax)
-  #                & (rj > sigmarj(j)) & (ij > sigmaij(j)) )[0]
-  # This selection selects objects with SNR > snr_limit
-  
-  icand = np.where((rj > rjmin) & (ij > ijmin) & (j > jmax)
-                  & (rj > sigmarj(j)) & (ij > sigmaij(j)) &
-                   (sn > snr_limit) & (ij8 > i_j8min))[0]
-
-
-  return icand,jarr,sigma2_col_rj,sigma2_col_ij
-
-
 
 def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec'):
 
