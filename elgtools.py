@@ -43,7 +43,7 @@ def make_sel_sigma(gal_jplus,jarr):
 
   return sigmarj, sigmaij
 
-def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit = 5.0,ij8lim = -10):
+def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit = 5.0,ij8lim = -10,cstar_max = .9,makeplot = True):
 
 # Create a list of ELG candidates from gal_jplus.
 # by_tile: means that this is performed for each tile independently, considering the SNR and errors of each tile.  Otherwise it is 
@@ -64,10 +64,16 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
   ntiles = len(tiles_arr) if by_tile else 1
   print 'Total number of tiles: %d' % ntiles
   
+  
+
+  npp = 0
+  ix = 0
+  iy = 0
   for it in range(ntiles):
     if by_tile:
       tile_i = tiles_arr[it]
       seltile = gal_jplus['tile_id'] == tile_i
+      idseltile = np.where(seltile)[0]
       gal_tile = jplus.tools.select_object(gal_jplus, seltile)  # selecting objects in tile_i
     else:
       gal_tile = gal_jplus
@@ -79,6 +85,7 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
     ij = gal_tile['iJAVA'][:,0] - gal_tile['J0660'][:,0]
     ij8 = gal_tile['iJAVA'][:,0] - gal_tile['J0861'][:,0]
     jerr = gal_tile['J0660'][:,1]
+    cstar = gal_tile['cstar']
     sn = 1./jerr
     
     for ib in range(nbins):
@@ -90,16 +97,45 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
     
     icand = np.where((rj > rjlim) & (ij > ijlim)
             & (rj > sigmarj(j)) & (ij > sigmaij(j)) &
-            (sn > snr_limit) & (ij8 > ij8lim))[0]
+            (sn > snr_limit) & (ij8 > ij8lim)
+            & (cstar < cstar_max))[0]
    
     ncand = len(icand)
     print 'mag for snr %f: %f. candidates in tile %d: %d' % (snr_limit,jmin,tile_i,ncand)
 
-    if ncand > 0:
-      kcount[kk:kk+ncand] = seltile[icand]  # From tile it, candidates icand
-    
-    kk += ncand
+    if makeplot and npp < 25:
+      print ix, iy
+      gs = gsc.GridSpec(5,5)
+      gs.update(wspace=0.0,hspace=0.0)
+      
+      ax = plt.subplot(gs[ix,iy])
+      ax.plot(gal_tile['J0660'][:,0],gal_tile['rJAVA'][:,0]-gal_tile['J0660'][:,0],',',color='gray')
+      ax.plot(gal_tile['J0660'][icand,0],gal_tile['rJAVA'][icand,0]-gal_tile['J0660'][icand,0],'.',color='royalblue')
+      ax.plot(jarr,sigmarj(jarr),color='red',linewidth=2)
 
+      ax.set_ylim([-0.49,2.99])
+      ax.set_xlim([16,21.5])
+      ax.text(0.25,.75,'%d' % tile_i,transform=ax.transAxes)
+      if iy > 0:
+        ax.set_yticklabels([])
+        
+#      axarr[0].set_xlabel('J0660',fontsize=10)
+#      axarr[0].set_ylabel('r - J0660',fontsize=10)
+
+      iy = iy + 1 if ix == 4 else iy + 0 
+      ix = ix + 1 if ix < 4 else 0
+      npp += 1
+    
+    if npp == 25:
+      plt.savefig('colmag.png',bbox_inches='tight')
+      import pdb ; pdb.set_trace()
+    
+    if ncand > 0:
+      kcount[kk:kk+ncand] = idseltile[icand]  # From tile it, candidates icand
+      kk += ncand
+   
+
+  
   gal_cand = jplus.tools.select_object(gal_jplus,kcount[0:kk])
   return gal_cand
  
@@ -120,15 +156,15 @@ add_muse = True, add_composite=True, add_sdsszline = True):
   d2,ind2 = jplus.tools.crossmatch_angular(gal_sdss['coords'],gal_jplus['coords'],max_distance=3e-4)
   m2 = ((d2 != np.inf))
   jplus_iz = jplus.tools.select_object(gal_jplus,m2)
-  r_j = jplus_iz['rJAVA'][:,0] - jplus_iz['J0660'][:,0]
-  i_j = jplus_iz['iJAVA'][:,0] - jplus_iz['J0660'][:,0]
+  xax = jplus_iz[xaxis[0]][:,0] - jplus_iz[xaxis[1]][:,0]
+  yax = jplus_iz[yaxis[0]][:,0] - jplus_iz[yaxis[1]][:,0]
   zax = gal_sdss['zspec']
 
   plt.figure
   plt.figure('colcol')
 
   lab = 'SDSS Spec in J-PLUS'
-  plt.plot(r_j,i_j,'.',color='gray',label = lab)
+  plt.plot(xax,yax,'.',color='gray',label = lab)
   
   plt.ylim([-0.5,2.5])
   plt.xlim([-0.5,2.5])
@@ -319,6 +355,221 @@ def get_musewide_spec(zrange,strong=None):
 
 
 
+def get_elg_photoz(gal_elgs):
+#2) Run LePhare on JPLUS Broad-band photometry, recalibrating tile by tile
+  
+  matplotlib.rcParams['figure.figsize'] = (8,6)
+  #d,ind = jplus.tools.crossmatch_angular(gal_elgs['coords'],gal_eboss['coords'],max_distance=3e-4)
+  #m2 = ((d != np.inf))
+  #elg_eboss = jplus.tools.select_object(gal_elgs,m2)
+
+  #for dset in [gal_elgs, elg_eboss]:
+  #    for ifilter in jplus.datasets.jplus_filter_names():
+  #        if ifilter in elg_eboss:
+  #            ind = np.isfinite(dset[ifilter][:,0])
+  #            dset[ifilter][~ind,:] = [-99,-99]
+  #            dset[ifilter][dset[ifilter][:,0]==99,:] = [-99,-99]
+  #            dset[ifilter][dset[ifilter][:,0]==0,:] = [-99,-99]
+  #        
+  #for ifilter in jplus.datasets.jplus_filter_names():
+  #    print ifilter
+      #print elg_eboss[ifilter] 
+
+  allfilters = [1,1,1,1,1,1,1,1,1,1,1,    1, 0,0,0,0,0, 0,0,0,0,0]
+  bbfilters = [1,1,1,1,1,1,1,1,0,1,1,    1, 0,0,0,0,0, 0,0,0,0,0]
 
 
+  #elg_eboss['redshift'] = np.zeros(len(elg_eboss['rJAVA'][:,0]))
+  gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
+
+  Lephare_bb = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=True, recalibration=False,
+                                 filterflag=bbfilters,
+                                 suffix='_elg_eboss',emlines=True,filename='noJ0660')
+
+  Lephare_bb.prepare(overwrite=True)
+  jp_photoz_bb = Lephare_bb.run(overwrite=True)
+
+  Lephare_all = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=True, recalibration=False,
+                                 filterflag=allfilters,
+                                 suffix='_elg_eboss',emlines=True,filename='allfilters')
+
+  Lephare_all.prepare(overwrite=False)
+  jp_photoz_all = Lephare_all.run(overwrite=False)
+
+  plt.hist(jp_photoz_broad['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='broad band photo-z')
+  plt.hist(jp_photoz_all['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='red',label = 'all filters photo-z')
+
+
+  plt.legend()
+  plt.savefig('photoz.pdf',bbox_inches='tight')
+
+  """
+  nostars_bb = np.where(jp_photoz_broad['bestchi2'] < 1)[0]
+  nostars_all = np.where(jp_photoz_all['bestchi2'] < 1)[0]
+
+  #print nostars_bb
+  #print nostars_all
+  #print jp_photoz_all['bestchi2']
+
+  print 'fraction of stars in broad band photoz %f' % (float(len(nostars_bb))/float(len(jp_photoz_broad['photoz'])))
+  print 'fraction of stars in all bands photoz %f' % (float(len(nostars_all))/float(len(jp_photoz_all['photoz'])))
+
+  plt.hist(jp_photoz_broad['photoz'][nostars_bb],range=[.01,.9],bins=100,alpha = 0.5,color='green',label='no stars broad band photo-z')
+  plt.hist(jp_photoz_all['photoz'][nostars_all],range=[.01,.9],bins=100,alpha = 0.5,color='pink',label = 'no stars all filters photo-z')
+
+  z1 = 0.76
+  oii = 3727.0
+  oiii = 5007.0
+  ha = 6562.0
+  hb = 4860.0
+
+  j_filter = jplus.datasets.fetch_jplus_filter('J0660')
+
+
+  joii = (j_filter.wave - oii)/oii
+  joiii = (j_filter.wave - oiii)/oiii
+  jhb = (j_filter.wave - hb)/hb
+  jha = (j_filter.wave - ha)/ha
+
+  plt.plot(joii,j_filter.throughput*80.0,label=r'$[OII]$')
+  plt.plot(jha,j_filter.throughput*80.0,label=r'$H\alpha$')
+  plt.plot(jhb,j_filter.throughput*80.0,label=r'$H\beta$')
+  plt.plot(joiii,j_filter.throughput*80.0,label=r'$[OIII]$')
+
+  plt.xlim([-0.05,0.9])
+
+
+  plt.legend()
+  plt.show()
+
+  plt.scatter(jp_photoz_broad['photoz'],jp_photoz_all['photoz'],s=jp_photoz_all['photoz_err'])
+  plt.xlabel('J-PLUS without J0660')
+  plt.ylabel('All J-PLUS')
+  plt.show()
+
+  plt.plot(jp_photoz_all['photoz'],gal_elgs['J0660'][:,0],'o')
+  plt.ylabel('J0660')
+  plt.xlabel('redshift')
+  plt.show()
+
+
+  #zpdf = np.loadtxt('PDF.pdz')
+  #zarr = np.loadtxt('PDF.zph')
+  
+  matplotlib.rcParams['figure.figsize'] = (12,42)
+  gs = gsc.GridSpec(10,2)
+
+  k = 0
+  for i in range(10):
+      for j in range(2):
+          gid = nostars_all[k]
+                 
+          ax = plt.subplot(gs[i,j])
+          nozero_all = np.where(jp_photoz_all['PDF'][gid,:] > 0)[0]
+          nozero_bb  = np.where(jp_photoz_broad['PDF'][gid,:] > 0)[0]
+          
+          plt.plot(jp_photoz_all['PDFZSTEP'][nozero_all],jp_photoz_all['PDF'][gid,nozero_all],color='blue')
+          plt.plot(jp_photoz_broad['PDFZSTEP'][nozero_bb],jp_photoz_broad['PDF'][gid,nozero_bb],color='red')
+          k += 1
+          
+          ax.set_xlim([0,1.0])
+
+  plt.show()
+  
+
+  matplotlib.rcParams['figure.figsize'] = (10,8)
+
+
+  plt.plot(jp_photoz_all['photoz'],gal_elgs['cstar'],'o')
+  plt.xlabel('redshift')
+  plt.ylabel('CLASS STAR')
+  plt.show()
+
+
+  matplotlib.rcParams['figure.figsize'] = (14,10)
+
+  gs = gsc.GridSpec(3,5)
+
+  z0gal = np.where((jp_photoz_all['photoz'] < 0.1) & (jp_photoz_all['bestchi2'] == 0))[0]
+  z3p5gal = np.where((jp_photoz_all['photoz'] < 0.38) & (jp_photoz_all['photoz'] > 0.32)  & (jp_photoz_all['bestchi2'] == 0))[0]
+  z7p7gal = np.where((jp_photoz_all['photoz'] < .8) & (jp_photoz_all['photoz'] > .74)  & (jp_photoz_all['bestchi2'] == 0))[0]
+
+  gals = [z0gal, z3p5gal, z7p7gal]
+
+  k = 0
+
+
+  sedl = jp_photoz_all['SPEC_GAL1_lamA']
+
+  # quick and dirty mean wavelength of filters
+
+  medfilt = [3485., 3785., 3950., 4100., 4300., 4750.,5150.,6250.,6600.,7725.,8610.,9150.]
+
+
+  for i in range(len(gals)):
+      iz = gals[i]
+      for j in range(5):
+          ax = plt.subplot(gs[i,j])
+          print iz[j]
+          sed_bestmag = jp_photoz_all['SPEC_GAL1_magAB'][iz[j],:]
+          ax.plot(sedl,sed_bestmag,color='black',label='z=%.3f' % (jp_photoz_all['photoz'][iz[j]]))
+          
+          iff = 0
+          for ifilter in jplus.datasets.jplus_filter_names():
+              ax.errorbar([medfilt[iff],medfilt[iff]],[gal_elgs[ifilter][iz[j],0],
+                                                       gal_elgs[ifilter][iz[j],0]],
+                          yerr=[gal_elgs[ifilter][iz[j],1],gal_elgs[ifilter][iz[j],1]],color='blue',fmt='o')
+              
+              iff +=1
+          ax.set_ylim([24,19])
+          ax.set_xlim([3000.,9990.])
+          ax.set_xticks([3000,6000,9000])
+          ax.legend()
+          
+  plt.show()
+  """
+          
+  """
+  ids = ["%d-%d"%t for t in zip(elg_eboss['object_id'], elg_eboss['tile_id'])]
+  jplus.plotting.photoz_error(elg_eboss['redshift'], jp_photoz['photoz'], ids=ids,
+            binwidth=0.05, modnos=jp_photoz['modelno'], modnoind=1)
+  #plt.fill_between([0.74,0.79],[0,0],[1,1],facecolor='red')
+  
+
+
+  gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
+
+  Lephare = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=True, recalibration=False,
+                                 filterflag=fflag, 
+                                 suffix='_elgs',
+                                emlines=True)
+
+  Lephare.prepare(overwrite=False)
+  jp_photoz = Lephare.run(overwrite=False)
+
+  gal_elgs['redshift'] = jp_photoz['photoz']
+  ids = ["%d-%d"%t for t in zip(gal_elgs['object_id'], gal_elgs['tile_id'])]
+  jplus.plotting.photoz_error(gal_elgs['redshift'], jp_photoz['photoz'], ids=ids,
+            binwidth=0.05, modnos=jp_photoz['modelno'], modnoind=1)
+  #plt.fill_between([0.74,0.79],[0,0],[1,1],facecolor='red')
+  plt.show()
+
+
+  gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
+  Lephare = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
+                                 filterflag=[1,1,1,1,1,1,1,1,1,1,1,    1, 0,0,0,0,0, 0,0,0,0,0], 
+                                 suffix='_elgsnoline', emlines=True)
+  Lephare.prepare(overwrite=False)
+  jp_photoz = Lephare.run(overwrite=False)
+
+  gal_elgs['redshift'] = jp_photoz['photoz']
+  ids = ["%d-%d"%t for t in zip(gal_elgs['object_id'], gal_elgs['tile_id'])]
+  jplus.plotting.photoz_error(gal_elgs['redshift'], jp_photoz['photoz'], ids=ids,
+            binwidth=0.05, modnos=jp_photoz['modelno'], modnoind=1)
+  #plt.fill_between([0.74,0.79],[0,0],[1,1],facecolor='red')
+  plt.show()
+
+  """
+
+  return jp_photoz_all
 

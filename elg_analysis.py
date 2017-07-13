@@ -28,13 +28,13 @@ PlotComposite   = False
 ZpLephare       = True  # Recalibrate zero points using Lephare
 FindXMatches    = True # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
 UseSDSSBB       = True  # Use SDSS Broad band filters instead of J-PLUS
-PlotColCol      = False # Plot the colour-colour selection of ELG candidates
+PlotColCol      = True # Plot the colour-colour selection of ELG candidates
 PlotColMags     = False # Plot color-magnitude diagrams
 MakeELGsel      = True  # Create an ELG selection
-GetPhotoz       = False # Get photometric redshifts with LePhare
+GetPhotoz       = True # Get photometric redshifts with LePhare
 ComputeTwoP     = True  # Compute the angular correlation function of the catalogue
 
-BrowseObjImages = True  # Opens a browser with the object image of each candidate
+BrowseObjImages = False  # Opens a browser with the object image of each candidate
 
 
 if PlotComposite:
@@ -124,7 +124,7 @@ if PlotColCol:
 if MakeELGsel:
   ijlim = 0.5
   rjlim = 0.5
-  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim)  
+  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=True)  
 
   nelgs= len(gal_elgs['tile_id'])
   print 'Total number of OII emitter candidates: %d' % nelgs
@@ -211,8 +211,10 @@ if PlotColMags:
 """
 
 if GetPhotoz:
-  get_elg_photoz()
+  zphot = get_elg_photoz(gal_elgs)
  
+  import pdb ; pdb.set_trace()
+
 if BrowseObjImages:
   import webbrowser as wb
   fracbrowse = .01  # fraction of objects to browse. Set to 1 to look at them all
@@ -249,16 +251,16 @@ if ComputeTwoP:
   #hp.plot(title="Random Distribution")
 
   good = mask.contains(gal_elgs['coords'])## & (gal_elgs['rJAVA'][:,0] < 20.5)
-  gal_elgs= jplus.tools.select_object(gal_elgs, good)
+  #gal_elgs= jplus.tools.select_object(gal_elgs, good)
 
-  good = (mask.contains(gal_sdss['coords']) & (gal_sdss['rSDSS'][:,0] < 21.5) 
-          & (gal_sdss['zspec'] > 0.7) & (gal_sdss['zspec'] < 0.8 ) ) 
-  gal_elgs= jplus.tools.select_object(gal_sdss, good)
+  #good = (mask.contains(gal_sdss['coords']) & (gal_sdss['rSDSS'][:,0] < 21.5) 
+  #        & (gal_sdss['zspec'] > 0.7) & (gal_sdss['zspec'] < 0.8 ) ) 
+  #gal_elgs= jplus.tools.select_object(gal_sdss, good)
 
   plt.figure(3)
 
   plt.plot(ran['coords'][:,0],ran['coords'][:,1],',',color='gray')
-  plt.plot(gal_elgs['coords'][:,0],gal_elgs['coords'][:,1],'.',markersize=0.2,color='royalblue',label='ELG candidates')
+  plt.plot(gal_elgs['coords'][:,0],gal_elgs['coords'][:,1],'o',markersize=3,color='royalblue',label='ELG candidates')
   plt.legend()
   plt.xlabel('RA')
   plt.ylabel('DEC')
