@@ -10,6 +10,7 @@ import jplus
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gsc
 
 import elgtools as elg
 
@@ -27,11 +28,11 @@ PlotComposite   = False
 ZpLephare       = True  # Recalibrate zero points using Lephare
 FindXMatches    = True # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
 UseSDSSBB       = True  # Use SDSS Broad band filters instead of J-PLUS
-PlotColCol      = True # Plot the colour-colour selection of ELG candidates
-PlotColMags     = True # Plot color-magnitude diagrams
+PlotColCol      = False # Plot the colour-colour selection of ELG candidates
+PlotColMags     = False # Plot color-magnitude diagrams
 MakeELGsel      = True  # Create an ELG selection
 GetPhotoz       = False # Get photometric redshifts with LePhare
-ComputeTwoP     = False  # Compute the angular correlation function of the catalogue
+ComputeTwoP     = True  # Compute the angular correlation function of the catalogue
 
 BrowseObjImages = True  # Opens a browser with the object image of each candidate
 
@@ -105,14 +106,31 @@ if UseSDSSBB:
 
 if PlotColCol:
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus)
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'])
+
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,add_muse=False,add_composite=False,add_sdsszline=False)
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'],
+  add_muse=False,add_composite=False,add_sdsszline=False)
+  
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,add_muse=False,add_composite=False)
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'],
+  add_muse=False,add_composite=False)
+
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,add_muse=False)
+  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'],
+  add_muse=False)
+
 
 if MakeELGsel:
+  ijlim = 0.5
+  rjlim = 0.5
   gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim)  
 
   nelgs= len(gal_elgs['tile_id'])
   print 'Total number of OII emitter candidates: %d' % nelgs
 
 
+"""
 if PlotColMags:       
   gs = gsc.GridSpec(2,2)
   gs.update(wspace=0.3,hspace=0.3,right=0.85)
@@ -190,11 +208,11 @@ if PlotColMags:
   axarr[2].legend(loc='center left', bbox_to_anchor=(1.25, 0.5),fontsize=15)
 
   plt.show()
+"""
 
 if GetPhotoz:
   get_elg_photoz()
  
-
 if BrowseObjImages:
   import webbrowser as wb
   fracbrowse = .01  # fraction of objects to browse. Set to 1 to look at them all
@@ -212,7 +230,6 @@ if BrowseObjImages:
     flag[iw] = input('Flag object?: ')
 
 
- 
 if ComputeTwoP:
 
 

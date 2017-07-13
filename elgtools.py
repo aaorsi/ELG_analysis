@@ -114,7 +114,8 @@ def zline(lam_line, wf,tf):  # finds the redshift range of a line in a given fil
   
 
 
-def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec',add_muse=True):
+def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec',xaxis = ['rJAVA','J0660'],yaxis=['iJAVA','J0660'],
+add_muse = True, add_composite=True, add_sdsszline = True):
 
   d2,ind2 = jplus.tools.crossmatch_angular(gal_sdss['coords'],gal_jplus['coords'],max_distance=3e-4)
   m2 = ((d2 != np.inf))
@@ -123,6 +124,7 @@ def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec',add_muse=True):
   i_j = jplus_iz['iJAVA'][:,0] - jplus_iz['J0660'][:,0]
   zax = gal_sdss['zspec']
 
+  plt.figure
   plt.figure('colcol')
 
   lab = 'SDSS Spec in J-PLUS'
@@ -131,8 +133,8 @@ def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec',add_muse=True):
   plt.ylim([-0.5,2.5])
   plt.xlim([-0.5,2.5])
 
-  plt.xlabel('rJAVA - J0660',fontsize=20)
-  plt.ylabel('iJAVA - J0660',fontsize=20)
+  plt.xlabel('%s-%s' % (xaxis[0],xaxis[1]),fontsize=20)
+  plt.ylabel('%s-%s' % (yaxis[0],yaxis[1]),fontsize=20)
 
   # Now add composite spectra
 
@@ -140,86 +142,110 @@ def plot_colcol_sdss_jplus(gal_sdss, gal_jplus,zcoord='zspec',add_muse=True):
   
   
   zarr = [0.005,0.8, 0.356, 0.30]
-  w0   = [6560., 3727., 5007., 4860.0]
-  wname = [r'H\alpha',r'[OII]',r'[OIII]',r'H\beta']
+  w0   = [6560., 3727., 5007., 4860.0,4959]
+  wname = [r'H\alpha',r'[OII]',r'[OIII]_{\lambda 5007}',r'H\beta', r'[OIII]_{\lambda 4959}']
   nline = len(w0)
-  new = 10
+  new = 50
   ewarr = np.logspace(0.5,3.0,num=new)
-  color = 'blue'
+  color = plt.cm.coolwarm(np.linspace(0.,1,new))
 
   j = 1
 
-  ztrack = np.zeros([new,2])
-  for iew in range(new):    
-      i = ewarr[iew]
-      specline = jplus.datasets.add_line_to_spec(spec_elg,EW=i,obsframe=True,wavelength0=w0[0])
-      specc = {'w':specline['w'],'flux':specline['flux']}
-      conv_mags = jplus.datasets.compute_jplus_photometry_singlespec(specc)
-      r_j = conv_mags['rJAVA'] - conv_mags['J0660']
-      i_j = conv_mags['iJAVA'] - conv_mags['J0660']
-      g_r = conv_mags['gJAVA'] - conv_mags['rJAVA']
-      ztrack[iew,0] = r_j
-      ztrack[iew,1] = i_j
+  icount = 0
+  
+  if add_composite:
+    icount += 1
+    idd = np.where( np.concatenate([xaxis,yaxis]) == 'J0660')[0]
+    # Add composite spectrum only if plot includes the J0660 filter.
+    if len(idd) > 0:
+      ztrack = np.zeros([new,2])
+      for iew in range(new):    
+          i = ewarr[iew]
+          specline = jplus.datasets.add_line_to_spec(spec_elg,EW=i,obsframe=True,wavelength0=w0[0])
+          specc = {'w':specline['w'],'flux':specline['flux']}
+          conv_mags = jplus.datasets.compute_jplus_photometry_singlespec(specc)
+          
+          xax = conv_mags[xaxis[0]] - conv_mags[xaxis[1]]
+          yax = conv_mags[yaxis[0]] - conv_mags[yaxis[1]]
+
+
+          ztrack[iew,0] = xax
+          ztrack[iew,1] = yax
+          
+  #        plt.plot([xax,xax],[yax,yax],'.',color=color[iew])
       
-  plt.plot(ztrack[:,0],ztrack[:,1],color=color)
-              
+      sc = plt.scatter(ztrack[:,0],ztrack[:,1],s = 25,c=ewarr,cmap=plt.cm.coolwarm)
+      cb = plt.colorbar(sc)
+      cb.ax.set_title('EW')
 
   ijlim = 0.6
   rjlim = 0.0
 
-  plt.plot([ijlim,3],[ijlim,ijlim],linewidth=4,color='black')        
-  plt.plot([rjlim,rjlim],[ijlim,3],linewidth=4,color='black')        
-  plt.legend()       
+#  plt.plot([ijlim,3],[ijlim,ijlim],linewidth=4,color='black')        
+#  plt.plot([rjlim,rjlim],[ijlim,3],linewidth=4,color='black')        
+#  plt.legend()       
 
   j0660 = jplus.datasets.fetch_jplus_filter('J0660')
   color = plt.cm.Paired(np.linspace(0.1,.9,nline))
   
-  for il in range(nline):
-    zr = zline(w0[il],j0660.wave,j0660.throughput)
-    iz_sdss = np.where((gal_sdss['zspec'] > zr[0]) & 
-              (gal_sdss['zspec'] < zr[1]))
-              
-    d2,ind2 = jplus.tools.crossmatch_angular(gal_sdss['coords'][iz_sdss],gal_jplus['coords'],max_distance=3e-4)
-    m2 = ((d2 != np.inf))
-    jplus_iz = jplus.tools.select_object(gal_jplus,m2)
-    r_j = jplus_iz['rJAVA'][:,0] - jplus_iz['J0660'][:,0]
-    i_j = jplus_iz['iJAVA'][:,0] - jplus_iz['J0660'][:,0]
-    
-    plt.plot(r_j,i_j,'o',color=color[il],markersize=12,label=r'$%s, %.2f<z<%.2f$' % (wname[il],zr[0],zr[1]) )
+  if add_sdsszline:
+    icount += 10
+    for il in range(nline):
+      zr = zline(w0[il],j0660.wave,j0660.throughput)
+      iz_sdss = np.where((gal_sdss['zspec'] > zr[0]) & 
+                (gal_sdss['zspec'] < zr[1]))
+                
+      d2,ind2 = jplus.tools.crossmatch_angular(gal_sdss['coords'][iz_sdss],gal_jplus['coords'],max_distance=3e-4)
+      m2 = ((d2 != np.inf))
+      jplus_iz = jplus.tools.select_object(gal_jplus,m2)
+  #    r_j = jplus_iz['rJAVA'][:,0] - jplus_iz['J0660'][:,0]
+  #    i_j = jplus_iz['iJAVA'][:,0] - jplus_iz['J0660'][:,0]
+      
+      xax = jplus_iz[xaxis[0]][:,0] - jplus_iz[xaxis[1]][:,0]
+      yax = jplus_iz[yaxis[0]][:,0] - jplus_iz[yaxis[1]][:,0]
+
+      plt.plot(xax,yax,'o',color=color[il],markersize=8,label=r'$%s, %.2f<z<%.2f$' % (wname[il],zr[0],zr[1]) )
 
 
   if add_muse: # also add MUSE spectra in colour-colour plot
-    
+    icount += 100 
     for il in range(nline):
     
       zr = zline(w0[il],j0660.wave,j0660.throughput) # show OII emitters
-      nz, speclist = get_musewide_spec(zr)
+      nz, speclist = get_musewide_spec(zr,strong='O2')
      
       for iz in range(nz):
         ww = speclist[iz]['WAVE_VAC']
         ff = speclist[iz]['FLUX']
-        ff += np.abs(ff.min()) # avoid negative flux
         nw = len(ww)
+        for ii in range(nw):
+          ff[ii] = 0.0 if ff[ii] < 0 else ff[ii]  # remove negative fluxes (???)
+
         
         flux = np.zeros([nw,2]) # recreating flux structure for compatibility
         flux[:,0] = ff
         specc = {'w':ww,'flux':flux}
         conv_mags = jplus.datasets.compute_jplus_photometry_singlespec(specc)
         
-        r_j = conv_mags['rJAVA'] - conv_mags['J0660']
-        i_j = conv_mags['iJAVA'] - conv_mags['J0660']
-        g_r = conv_mags['gJAVA'] - conv_mags['rJAVA']
+        #r_j = conv_mags['rJAVA'] - conv_mags['J0660']
+        #i_j = conv_mags['iJAVA'] - conv_mags['J0660']
+        #g_r = conv_mags['gJAVA'] - conv_mags['rJAVA']
     
-        plt.plot([r_j,r_j],[i_j,i_j],'D',color=color[il],
-        markersize=14,label='MUSE Wide-Survey %.2f <z<%.2f' % (zr[0],zr[1]) if iz == 0 else '')
+
+        xax = conv_mags[xaxis[0]] - conv_mags[xaxis[1]]
+        yax = conv_mags[yaxis[0]] - conv_mags[yaxis[1]]
+
+        plt.plot([xax,xax],[yax,yax],'D',color=color[il],
+        markersize=10,label='MUSE Wide-Survey $%.2f <z<%.2f$' % (zr[0],zr[1]) if iz == 0 else '')
 
 
 
 
 
 
-  plt.legend()
-  plt.show()
+  plt.legend(loc = 'upper left')
+  plt.savefig('%s-%s.%s-%s_%d.pdf' % (xaxis[0],xaxis[1],yaxis[0],yaxis[1],icount),bbox_inches='tight')
+  plt.close()
   return ijlim,rjlim
 
 
@@ -242,8 +268,9 @@ def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec'):
 
 
 
-def get_musewide_spec(zrange):
+def get_musewide_spec(zrange,strong=None):
 # downloads muse 1d spectra of objects at a given z-range and returns the spectra
+# strong = 'O2', 'O3', etc... select objects with that primary line. None selects them all
 
   from astropy.io import fits
   import wget
@@ -259,8 +286,13 @@ def get_musewide_spec(zrange):
   data = dd[1].data
   dd.close()
 
+  if strong is not None:
+    lead_line = data['LEAD_LINE'] == strong
+  else:
+    lead_line = 1
+
   iz = np.where((data['Z'] > zrange[0])
-       & (data['Z'] < zrange[1]))[0]
+       & (data['Z'] < zrange[1]) & lead_line)[0]
 
   nz = len(iz)
   print 'Number of MUSE spectra in %.2f < z < %.2f: %d' % (zrange[0],zrange[1],nz)
