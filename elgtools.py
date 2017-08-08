@@ -43,7 +43,7 @@ def make_sel_sigma(gal_jplus,jarr):
 
   return sigmarj, sigmaij
 
-def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit = 5.0,ij8lim = -10,cstar_max = .9,makeplot = True):
+def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit = 5.0,ij8lim = -10,cstar_max = .9,makeplot = False):
 
 # Create a list of ELG candidates from gal_jplus.
 # by_tile: means that this is performed for each tile independently, considering the SNR and errors of each tile.  Otherwise it is 
@@ -63,8 +63,6 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
   tiles_arr = np.unique(gal_jplus['tile_id'])
   ntiles = len(tiles_arr) if by_tile else 1
   print 'Total number of tiles: %d' % ntiles
-  
-  
 
   npp = 0
   ix = 0
@@ -126,7 +124,7 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
       ix = ix + 1 if ix < 4 else 0
       npp += 1
     
-    if npp == 25:
+    if npp == 25 and makeplot:
       plt.savefig('colmag.png',bbox_inches='tight')
       import pdb ; pdb.set_trace()
     
@@ -432,8 +430,8 @@ def get_elg_photoz(gal_elgs):
   jha = (j_filter.wave - ha)/ha
 
   plt.plot(joii,j_filter.throughput*80.0,label=r'$[OII]$')
-  plt.plot(jha,j_filter.throughput*80.0,label=r'$H\alpha$')
-  plt.plot(jhb,j_filter.throughput*80.0,label=r'$H\beta$')
+  #plt.plot(jha,j_filter.throughput*80.0,label=r'$H\alpha$')
+  #plt.plot(jhb,j_filter.throughput*80.0,label=r'$H\beta$')
   plt.plot(joiii,j_filter.throughput*80.0,label=r'$[OIII]$')
 
   plt.xlim([-0.05,0.9])

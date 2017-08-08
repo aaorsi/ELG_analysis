@@ -57,7 +57,7 @@ if LoadCatalogues:
   mag_excess = "AND (m.MAG_APER_3_0[jplus::rSDSS]- m.MAG_APER_3_0[jplus::J0660]) > 0"
   gal_jplus = jplus.datasets.fetch_jplus_objects(mag_type="aperMags", overwrite=False, 
                                                  object_name="allELGs", nchunks=10, mag_limit=[16,24],
-                                                extra_where_conds=mag_excess,db='test2')
+                                                extra_where_conds=mag_excess,db='test3')
 
   gal_sdss  = jplus.datasets.fetch_sdss_qso(mag_type="aperMags", overwrite=False,mag_limit=[16,24])
   gal_phsdss  = jplus.datasets.fetch_sdss_photgalaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,22])
@@ -106,8 +106,9 @@ if UseSDSSBB:
 
 if PlotColCol:
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus)
-  ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'])
+# ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'])
 
+  """
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,add_muse=False,add_composite=False,add_sdsszline=False)
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'],
   add_muse=False,add_composite=False,add_sdsszline=False)
@@ -119,12 +120,12 @@ if PlotColCol:
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,add_muse=False)
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'],
   add_muse=False)
-
+  """
 
 if MakeELGsel:
   ijlim = 0.5
   rjlim = 0.5
-  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=True)  
+  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=False)  
 
   nelgs= len(gal_elgs['tile_id'])
   print 'Total number of OII emitter candidates: %d' % nelgs
@@ -212,7 +213,6 @@ if PlotColMags:
 
 if GetPhotoz:
   zphot = get_elg_photoz(gal_elgs)
- 
   import pdb ; pdb.set_trace()
 
 if BrowseObjImages:
@@ -233,7 +233,6 @@ if BrowseObjImages:
 
 
 if ComputeTwoP:
-
 
   import CosmoBolognaLib as cbl
   import pymangle
@@ -299,20 +298,5 @@ if ComputeTwoP:
   plt.xlabel(r'$\theta [deg]$',fontsize=20)
   plt.ylabel(r'$w(\theta)$',fontsize=20)
   plt.savefig('w_elgcand.pdf',bbox_inches='tight')
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
 
 
