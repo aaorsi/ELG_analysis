@@ -1,9 +1,10 @@
 
+import os
 jplusdir = '/home/CEFCA/aaorsi/work/j-plus/'
+elgdir   = os.getcwd()
 
 import sys
 sys.path.append(jplusdir)
-import os
 os.chdir(jplusdir)
 
 import jplus
@@ -14,6 +15,8 @@ import matplotlib.gridspec as gsc
 
 import elgtools as elg
 
+import pickle
+
 jplus.plotting.setup_text_plots(fontsize=10,usetex=True)
 spec_elg = jplus.datasets.fetch_eboss_elg_composite()
 matplotlib.rcParams['figure.figsize'] = (12,10)
@@ -21,8 +24,10 @@ matplotlib.rcParams['figure.figsize'] = (12,10)
 
 #### Options #####
 
-AddedPlots      = False  # Plot added stuff
+LoadELGs        = True   # Overrides ELG generation, and reads it from a python file.
+fout = '%s/out/elgs.dat' % elgdir
 
+AddedPlots      = False  # Plot added stuff
 LoadCatalogues  = True  # Should be true most of the time
 PlotComposite   = False
 ZpLephare       = True  # Recalibrate zero points using Lephare
@@ -53,7 +58,7 @@ if PlotComposite:
   plt.show()
 
 
-if LoadCatalogues:
+if LoadCatalogues and LoadELGs is False:
   mag_excess = "AND (m.MAG_APER_3_0[jplus::rSDSS]- m.MAG_APER_3_0[jplus::J0660]) > 0"
   gal_jplus = jplus.datasets.fetch_jplus_objects(mag_type="aperMags", overwrite=False, 
                                                  object_name="allELGs", nchunks=10, mag_limit=[16,24],
@@ -80,7 +85,7 @@ if LoadCatalogues:
 
 
 
-if FindXMatches:
+if FindXMatches and LoadELGs is False:
   
   sdssxeboss    = elg.find_xmatches(gal_sdss, gal_eboss, zcond=[.74,.76])
   gal_jplus_xx  = elg.find_xmatches(gal_jplus,sdssxeboss)
@@ -91,7 +96,7 @@ if FindXMatches:
   print 'Galaxies in SDSS Spec and eBOSS Targets', len(sdssxeboss['zspec'])
 
 
-if UseSDSSBB:
+if UseSDSSBB and LoadELGs is False:
   print 'Replacing J-PUS BBs with SDSS BBs...'
   d2,ind2 = jplus.tools.crossmatch_angular(gal_jplus['coords'],gal_phsdss['coords'],max_distance=3e-4)
   m2 = ((d2 != np.inf))
@@ -104,7 +109,7 @@ if UseSDSSBB:
       gal_jplus[f_jplus][m2,:] = gal_phsdss[f_sdss][ind2[m2],:]
 
 
-if PlotColCol:
+if PlotColCol and LoadELGs is False:
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus)
 # ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'])
 
@@ -122,97 +127,27 @@ if PlotColCol:
   add_muse=False)
   """
 
-if MakeELGsel:
+if MakeELGsel and LoadELGs is False:
   ijlim = 0.5
   rjlim = 0.5
   gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=False)  
 
   nelgs= len(gal_elgs['tile_id'])
   print 'Total number of OII emitter candidates: %d' % nelgs
+  
+  with open(fout,'wb') as outfile:
+    pickle.dump(gal_elgs,outfile,protocol=pickle.HIGHEST_PROTOCOL)
+  
+  print 'file %s created' % fout
 
 
-"""
-if PlotColMags:       
-  gs = gsc.GridSpec(2,2)
-  gs.update(wspace=0.3,hspace=0.3,right=0.85)
-  axarr = []
-  axarr.append(plt.subplot(gs[0,0]))
-  axarr.append(plt.subplot(gs[0,1]))
-  axarr.append(plt.subplot(gs[1,0]))
+if LoadELGs:
+  gal_elgs = pickle.load(open(fout))
 
-  axarr[0].plot(gal_jplus['J0660'][:,0],gal_jplus['rJAVA'][:,0]-gal_jplus['J0660'][:,0],',',color='gray')
-  axarr[1].plot(gal_jplus['rJAVA'][:,0]-gal_jplus['J0660'][:,0],gal_jplus['iJAVA'][:,0] - gal_jplus['J0660'][:,0],',',color='gray')
-  axarr[2].plot(gal_jplus['J0660'][:,0],gal_jplus['gJAVA'][:,0]-gal_jplus['rJAVA'][:,0],',',color='gray')
 
-  axarr[0].plot(gal_jplus_x['J0660'][:,0],gal_jplus_x['rJAVA'][:,0]-gal_jplus_x['J0660'][:,0],',',color='blue')
-  axarr[1].plot(gal_jplus_x['rJAVA'][:,0]-gal_jplus_x['J0660'][:,0],gal_jplus_x['iJAVA'][:,0] - gal_jplus_x['J0660'][:,0],',',color='blue')
-  axarr[2].plot(gal_jplus_x['J0660'][:,0],gal_jplus_x['gJAVA'][:,0]-gal_jplus_x['rJAVA'][:,0],',',color='blue')
-
-  axarr[0].plot(gal_jplus_xx['J0660'][:,0],gal_jplus_xx['rJAVA'][:,0]-gal_jplus_xx['J0660'][:,0],'*',color='pink',markersize=10)
-  axarr[1].plot(gal_jplus_xx['rJAVA'][:,0]-gal_jplus_xx['J0660'][:,0],gal_jplus_xx['iJAVA'][:,0] - gal_jplus_xx['J0660'][:,0],'*',
-                color='pink',markersize=10)
-  axarr[2].plot(gal_jplus_xx['J0660'][:,0],gal_jplus_xx['gJAVA'][:,0]-gal_jplus_xx['rJAVA'][:,0],'*',color='pink',markersize=10)
-
-  axarr[0].plot(jarr,sigma2_col_rj,color='red',linewidth=2)
-  axarr[0].plot(gal_jplus['J0660'][icand,0],gal_jplus['rJAVA'][icand,0]-gal_jplus['J0660'][icand,0],',',color='cyan')
-  axarr[1].plot(gal_jplus['rJAVA'][icand,0]-gal_jplus['J0660'][icand,0],gal_jplus['iJAVA'][icand,0] - gal_jplus['J0660'][icand,0],
-                ',',color='cyan')
-  axarr[2].plot(gal_jplus['J0660'][icand,0],gal_jplus['gJAVA'][icand,0]-gal_jplus['rJAVA'][icand,0],',',color='cyan')
-
-  spec_elg = jplus.datasets.fetch_eboss_elg_composite()
-  new = 5
-  ewarr = np.logspace(0.5,3,num=new)
-  amparr = np.logspace(-1,2.,num=10)
-  color = plt.cm.coolwarm(np.linspace(0.1,0.9,new))
-  z = 0.76
-  for iew in range(new):
-      i = ewarr[iew]
-      print i
-      ij = 0
-      for j in amparr:
-          #print 'EW = ',i
-          #print 'amp = ',j
-          specline = jplus.datasets.add_line_to_spec(spec_elg,EW=i,obsframe=True, z=z)
-          specline['flux'][:,0] *= j
-          specline['w'] *= (1+z)
-          #print specline['w'].min(),specline['w'].max()
-          conv_mags = jplus.datasets.compute_jplus_photometry_singlespec(specline)
-          
-          axarr[0].plot([conv_mags['J0660'],conv_mags['J0660']],         [(-conv_mags['J0660'] + conv_mags['rJAVA']),(-conv_mags['J0660'] + conv_mags['rJAVA'])],'.',
-                       color=color[iew])
-          
-          r_j = conv_mags['rJAVA'] - conv_mags['J0660']
-          i_j = conv_mags['iJAVA'] - conv_mags['J0660']
-          g_r = conv_mags['gJAVA'] - conv_mags['rJAVA']
-          axarr[1].plot([r_j,r_j],[i_j,i_j],'.',color=color[iew])
-          label = "$EW = %.2f \AA{}$" % (i) if ij == 0 else ''
-          axarr[2].plot([conv_mags['J0660'],conv_mags['J0660']],[g_r,g_r],'.',color=color[iew],label=label)
-          ij += 1
-          
-          
-          
-
-  axarr[0].set_ylim([-0.5,3])
-  axarr[0].set_xlim([16,21.5])
-  axarr[0].set_xlabel('J0660',fontsize=10)
-  axarr[0].set_ylabel('r - J0660',fontsize=10)
-
-  axarr[1].set_ylim([-1,3])
-  axarr[1].set_xlim([-1,3])
-  axarr[1].set_xlabel('r - J0660',fontsize=10)
-  axarr[1].set_ylabel('i - J0660',fontsize=10)
-
-  axarr[2].set_ylim([-1,4])
-  axarr[2].set_xlim([16,24])
-  axarr[2].set_xlabel('J0660',fontsize=10)
-  axarr[2].set_ylabel('g - r',fontsize=10)
-  axarr[2].legend(loc='center left', bbox_to_anchor=(1.25, 0.5),fontsize=15)
-
-  plt.show()
-"""
 
 if GetPhotoz:
-  zphot = get_elg_photoz(gal_elgs)
+  zphot = elg.get_elg_photoz(gal_elgs)
   import pdb ; pdb.set_trace()
 
 if BrowseObjImages:

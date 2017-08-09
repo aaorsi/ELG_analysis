@@ -2,6 +2,7 @@
 
 import sys
 sys.path.append('/home/CEFCA/aaorsi/work/j-plus/')
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gsc
 
@@ -339,6 +340,8 @@ def get_musewide_spec(zrange,strong=None):
     
     if not os.path.isfile(finput):
       filename = wget.download(url)
+      print subprocess.check_output(['mv',filename,'../elg_jplus/spec/muse/'])
+      filename = '../elg_jplus/spec/muse/%s' % filename
       print subprocess.check_output(['gunzip','-f',filename])
     else:
       filename = finput
@@ -350,6 +353,65 @@ def get_musewide_spec(zrange,strong=None):
 
     
   return nz, speclist
+
+
+
+def get_eboss_spec(zrange,typegal="'GALAXY'"):
+# Returns a list of spectra from eBOSS galaxies already downloaded
+#
+  from astropy.io import fits
+  datadir = '/home/CEFCA/aaorsi/work/elg_jplus/spec/eboss/'
+  
+  listfile = datadir + 'optical_search_27334.csv'
+  ldata = np.loadtxt(listfile,delimiter=',',dtype='S')
+  nd = len(ldata)
+  
+  zlist = np.zeros(nd)
+  idspec = []
+  typespec = []
+   
+
+
+  for ii in range(nd):
+    zlist[ii] = np.float(ldata[ii][7])
+    idspec.append('%s-%s-%04d' % (ldata[ii][0],ldata[ii][1],np.int(ldata[ii][2])))
+    typespec.append(ldata[ii][10])
+
+  
+  sel = np.where((np.array(typespec) == typegal) & (zlist >= zrange[0]) & (zlist <= zrange[1]))[0]
+  
+  ns = len(sel)
+
+  if ns == 0:
+    print 'WARNING: No eBOSS spectra found for %s between %d < z < %d' % (typegal, zrange[0],zrange[1])
+    return 0
+
+  flux = np.zeros([ns,2])
+  ww   = np.zeros(ns)
+
+  specout = []
+
+  print 'Retrieving eBOSS spectra...'
+  for jj in range(ns):
+    idj = sel[jj]
+    ffile = '%sspec-%s.fits' % (datadir,idspec[jj])
+    hdu = fits.open(ffile)
+
+    flux  = hdu[1].data['model'] # using model fluxes
+    ww    = 10**(hdu[1].data['loglam'])
+    
+    hdu.close()
+    specout.append({'flux':flux,'w':ww})
+    
+  print '%d spectra recorded.' % ns
+  return specout
+
+
+def get_vvds_spec(zrange):
+# Returns a list of spectra from all VVDS surveys.
+
+  from astropy.io import fits
+  datadir = '/home/CEFCA/aaorsi/work/elg_jplus/spec/vvds/'
 
 
 
@@ -373,201 +435,34 @@ def get_elg_photoz(gal_elgs):
   #    print ifilter
       #print elg_eboss[ifilter] 
 
-  allfilters = [1,1,1,1,1,1,1,1,1,1,1,    1, 0,0,0,0,0, 0,0,0,0,0]
-  bbfilters = [1,1,1,1,1,1,1,1,0,1,1,    1, 0,0,0,0,0, 0,0,0,0,0]
-
+  allfilters = [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
+  bbfilters =  [1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0]
+  nohafilters= [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
 
   #elg_eboss['redshift'] = np.zeros(len(elg_eboss['rJAVA'][:,0]))
   gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
 
-  Lephare_bb = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=True, recalibration=False,
+  Lephare_bb = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
                                  filterflag=bbfilters,
                                  suffix='_elg_eboss',emlines=True,filename='noJ0660')
 
   Lephare_bb.prepare(overwrite=True)
   jp_photoz_bb = Lephare_bb.run(overwrite=True)
 
-  Lephare_all = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=True, recalibration=False,
+  Lephare_all = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
                                  filterflag=allfilters,
                                  suffix='_elg_eboss',emlines=True,filename='allfilters')
 
   Lephare_all.prepare(overwrite=False)
   jp_photoz_all = Lephare_all.run(overwrite=False)
 
-  plt.hist(jp_photoz_broad['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='broad band photo-z')
+  #plt.hist(jp_photoz_broad['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='broad band photo-z')
   plt.hist(jp_photoz_all['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='red',label = 'all filters photo-z')
 
 
   plt.legend()
   plt.savefig('photoz.pdf',bbox_inches='tight')
 
-  """
-  nostars_bb = np.where(jp_photoz_broad['bestchi2'] < 1)[0]
-  nostars_all = np.where(jp_photoz_all['bestchi2'] < 1)[0]
-
-  #print nostars_bb
-  #print nostars_all
-  #print jp_photoz_all['bestchi2']
-
-  print 'fraction of stars in broad band photoz %f' % (float(len(nostars_bb))/float(len(jp_photoz_broad['photoz'])))
-  print 'fraction of stars in all bands photoz %f' % (float(len(nostars_all))/float(len(jp_photoz_all['photoz'])))
-
-  plt.hist(jp_photoz_broad['photoz'][nostars_bb],range=[.01,.9],bins=100,alpha = 0.5,color='green',label='no stars broad band photo-z')
-  plt.hist(jp_photoz_all['photoz'][nostars_all],range=[.01,.9],bins=100,alpha = 0.5,color='pink',label = 'no stars all filters photo-z')
-
-  z1 = 0.76
-  oii = 3727.0
-  oiii = 5007.0
-  ha = 6562.0
-  hb = 4860.0
-
-  j_filter = jplus.datasets.fetch_jplus_filter('J0660')
-
-
-  joii = (j_filter.wave - oii)/oii
-  joiii = (j_filter.wave - oiii)/oiii
-  jhb = (j_filter.wave - hb)/hb
-  jha = (j_filter.wave - ha)/ha
-
-  plt.plot(joii,j_filter.throughput*80.0,label=r'$[OII]$')
-  #plt.plot(jha,j_filter.throughput*80.0,label=r'$H\alpha$')
-  #plt.plot(jhb,j_filter.throughput*80.0,label=r'$H\beta$')
-  plt.plot(joiii,j_filter.throughput*80.0,label=r'$[OIII]$')
-
-  plt.xlim([-0.05,0.9])
-
-
-  plt.legend()
-  plt.show()
-
-  plt.scatter(jp_photoz_broad['photoz'],jp_photoz_all['photoz'],s=jp_photoz_all['photoz_err'])
-  plt.xlabel('J-PLUS without J0660')
-  plt.ylabel('All J-PLUS')
-  plt.show()
-
-  plt.plot(jp_photoz_all['photoz'],gal_elgs['J0660'][:,0],'o')
-  plt.ylabel('J0660')
-  plt.xlabel('redshift')
-  plt.show()
-
-
-  #zpdf = np.loadtxt('PDF.pdz')
-  #zarr = np.loadtxt('PDF.zph')
   
-  matplotlib.rcParams['figure.figsize'] = (12,42)
-  gs = gsc.GridSpec(10,2)
-
-  k = 0
-  for i in range(10):
-      for j in range(2):
-          gid = nostars_all[k]
-                 
-          ax = plt.subplot(gs[i,j])
-          nozero_all = np.where(jp_photoz_all['PDF'][gid,:] > 0)[0]
-          nozero_bb  = np.where(jp_photoz_broad['PDF'][gid,:] > 0)[0]
-          
-          plt.plot(jp_photoz_all['PDFZSTEP'][nozero_all],jp_photoz_all['PDF'][gid,nozero_all],color='blue')
-          plt.plot(jp_photoz_broad['PDFZSTEP'][nozero_bb],jp_photoz_broad['PDF'][gid,nozero_bb],color='red')
-          k += 1
-          
-          ax.set_xlim([0,1.0])
-
-  plt.show()
-  
-
-  matplotlib.rcParams['figure.figsize'] = (10,8)
-
-
-  plt.plot(jp_photoz_all['photoz'],gal_elgs['cstar'],'o')
-  plt.xlabel('redshift')
-  plt.ylabel('CLASS STAR')
-  plt.show()
-
-
-  matplotlib.rcParams['figure.figsize'] = (14,10)
-
-  gs = gsc.GridSpec(3,5)
-
-  z0gal = np.where((jp_photoz_all['photoz'] < 0.1) & (jp_photoz_all['bestchi2'] == 0))[0]
-  z3p5gal = np.where((jp_photoz_all['photoz'] < 0.38) & (jp_photoz_all['photoz'] > 0.32)  & (jp_photoz_all['bestchi2'] == 0))[0]
-  z7p7gal = np.where((jp_photoz_all['photoz'] < .8) & (jp_photoz_all['photoz'] > .74)  & (jp_photoz_all['bestchi2'] == 0))[0]
-
-  gals = [z0gal, z3p5gal, z7p7gal]
-
-  k = 0
-
-
-  sedl = jp_photoz_all['SPEC_GAL1_lamA']
-
-  # quick and dirty mean wavelength of filters
-
-  medfilt = [3485., 3785., 3950., 4100., 4300., 4750.,5150.,6250.,6600.,7725.,8610.,9150.]
-
-
-  for i in range(len(gals)):
-      iz = gals[i]
-      for j in range(5):
-          ax = plt.subplot(gs[i,j])
-          print iz[j]
-          sed_bestmag = jp_photoz_all['SPEC_GAL1_magAB'][iz[j],:]
-          ax.plot(sedl,sed_bestmag,color='black',label='z=%.3f' % (jp_photoz_all['photoz'][iz[j]]))
-          
-          iff = 0
-          for ifilter in jplus.datasets.jplus_filter_names():
-              ax.errorbar([medfilt[iff],medfilt[iff]],[gal_elgs[ifilter][iz[j],0],
-                                                       gal_elgs[ifilter][iz[j],0]],
-                          yerr=[gal_elgs[ifilter][iz[j],1],gal_elgs[ifilter][iz[j],1]],color='blue',fmt='o')
-              
-              iff +=1
-          ax.set_ylim([24,19])
-          ax.set_xlim([3000.,9990.])
-          ax.set_xticks([3000,6000,9000])
-          ax.legend()
-          
-  plt.show()
-  """
-          
-  """
-  ids = ["%d-%d"%t for t in zip(elg_eboss['object_id'], elg_eboss['tile_id'])]
-  jplus.plotting.photoz_error(elg_eboss['redshift'], jp_photoz['photoz'], ids=ids,
-            binwidth=0.05, modnos=jp_photoz['modelno'], modnoind=1)
-  #plt.fill_between([0.74,0.79],[0,0],[1,1],facecolor='red')
-  
-
-
-  gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
-
-  Lephare = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=True, recalibration=False,
-                                 filterflag=fflag, 
-                                 suffix='_elgs',
-                                emlines=True)
-
-  Lephare.prepare(overwrite=False)
-  jp_photoz = Lephare.run(overwrite=False)
-
-  gal_elgs['redshift'] = jp_photoz['photoz']
-  ids = ["%d-%d"%t for t in zip(gal_elgs['object_id'], gal_elgs['tile_id'])]
-  jplus.plotting.photoz_error(gal_elgs['redshift'], jp_photoz['photoz'], ids=ids,
-            binwidth=0.05, modnos=jp_photoz['modelno'], modnoind=1)
-  #plt.fill_between([0.74,0.79],[0,0],[1,1],facecolor='red')
-  plt.show()
-
-
-  gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
-  Lephare = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
-                                 filterflag=[1,1,1,1,1,1,1,1,1,1,1,    1, 0,0,0,0,0, 0,0,0,0,0], 
-                                 suffix='_elgsnoline', emlines=True)
-  Lephare.prepare(overwrite=False)
-  jp_photoz = Lephare.run(overwrite=False)
-
-  gal_elgs['redshift'] = jp_photoz['photoz']
-  ids = ["%d-%d"%t for t in zip(gal_elgs['object_id'], gal_elgs['tile_id'])]
-  jplus.plotting.photoz_error(gal_elgs['redshift'], jp_photoz['photoz'], ids=ids,
-            binwidth=0.05, modnos=jp_photoz['modelno'], modnoind=1)
-  #plt.fill_between([0.74,0.79],[0,0],[1,1],facecolor='red')
-  plt.show()
-
-  """
-
   return jp_photoz_all
 
