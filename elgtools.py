@@ -247,11 +247,13 @@ add_muse = True, add_composite=True, add_sdsszline = True):
     for il in range(nline):
     
       zr = zline(w0[il],j0660.wave,j0660.throughput) # show OII emitters
-      nz, speclist = get_musewide_spec(zr,strong='O2')
+      speclist = get_musewide_spec(zr,strong='O2')
      
+      nz = len(speclist)
+
       for iz in range(nz):
-        ww = speclist[iz]['WAVE_VAC']
-        ff = speclist[iz]['FLUX']
+        ww = speclist[iz]['w']
+        ff = speclist[iz]['flux'][:,0]
         nw = len(ww)
         for ii in range(nw):
           ff[ii] = 0.0 if ff[ii] < 0 else ff[ii]  # remove negative fluxes (???)
@@ -272,10 +274,6 @@ add_muse = True, add_composite=True, add_sdsszline = True):
 
         plt.plot([xax,xax],[yax,yax],'D',color=color[il],
         markersize=10,label='MUSE Wide-Survey $%.2f <z<%.2f$' % (zr[0],zr[1]) if iz == 0 else '')
-
-
-
-
 
 
   plt.legend(loc = 'upper left')
@@ -337,10 +335,15 @@ def get_musewide_spec(zrange,strong=None):
   for i in range(nz):
     finput = 'spectrum_%s.fits.gz' % data['UNIQUE_ID'][iz[i]]
     url = '%s%s' % (url_root,finput)
-    
-    if not os.path.isfile(finput):
+   
+    spdirout = '../elg_jplus/spec/muse/'
+    sfile = '%s%s' % (spdirout,finput)
+    sfile = sfile[:-3]
+    if not os.path.isfile(sfile):
+      print 'file %s not found, downloading...' % (sfile)
+#      import pdb ; pdb.set_trace()
       filename = wget.download(url)
-      print subprocess.check_output(['mv',filename,'../elg_jplus/spec/muse/'])
+      print subprocess.check_output(['mv',filename,spdirout])
       filename = '../elg_jplus/spec/muse/%s' % filename
       print subprocess.check_output(['gunzip','-f',filename])
     else:
@@ -348,11 +351,19 @@ def get_musewide_spec(zrange,strong=None):
 
     fitsfile = filename[:-3]
     dd = fits.open(fitsfile)
-    speclist.append(dd[1].data)
+    ww = dd[1].data['WAVE_VAC']
+    ff = dd[1].data['FLUX']
+
+    nw = len(ww)
+    flux = np.zeros([nw,2])
+    flux[:,0] = ff * 1e-20
+
+
+    speclist.append({'flux':flux,'w':ww,'z':data['Z'][iz[i]],'survey':'MUSE-Wide','file':sfile})
     dd.close()
 
     
-  return nz, speclist
+  return speclist
 
 
 
@@ -383,8 +394,8 @@ def get_eboss_spec(zrange,typegal="'GALAXY'"):
   ns = len(sel)
 
   if ns == 0:
-    print 'WARNING: No eBOSS spectra found for %s between %d < z < %d' % (typegal, zrange[0],zrange[1])
-    return 0
+    print 'WARNING: No eBOSS spectra found for %s between %f < z < %f' % (typegal, zrange[0],zrange[1])
+    return []
 
   flux = np.zeros([ns,2])
   ww   = np.zeros(ns)
@@ -397,21 +408,69 @@ def get_eboss_spec(zrange,typegal="'GALAXY'"):
     ffile = '%sspec-%s.fits' % (datadir,idspec[jj])
     hdu = fits.open(ffile)
 
-    flux  = hdu[1].data['model'] # using model fluxes
+    ff    = 1e-17 * hdu[1].data['model'] # using model fluxes
     ww    = 10**(hdu[1].data['loglam'])
-    
+    nw    = len(ww)
+    flux  = np.zeros([nw,2])
+    flux[:,0] = ff
+
     hdu.close()
-    specout.append({'flux':flux,'w':ww})
+    specout.append({'flux':flux,'w':ww,'z':zlist[jj],'survey':'eBOSS','file':ffile})
     
   print '%d spectra recorded.' % ns
   return specout
 
 
-def get_vvds_spec(zrange):
+def get_vvds_spec(zrange,survey = 'All'):
 # Returns a list of spectra from all VVDS surveys.
 
   from astropy.io import fits
+  import glob
+
   datadir = '/home/CEFCA/aaorsi/work/elg_jplus/spec/vvds/'
+  
+  if survey == 'All':
+    surveyarr = ['F10_WIDE','F14_WIDE','F22_WIDE','F02_DEEP','CDFS_DEEP','F02_UDEEP']
+  else:
+    surveyarr = survey
+
+  nsurvey = len(surveyarr)
+  specout = []
+
+  for s_i in range(nsurvey):  # loops over each survey
+    fdata = '%scesam_vvds_sp%s.txt' % (datadir, surveyarr[s_i])
+    specid, zarr = np.loadtxt(fdata,unpack=True,usecols=(0,4))
+    #zarr = dd[4]
+    #specid = dd[0]
+
+    zsel = np.where((zarr >= zrange[0]) & (zarr <= zrange[1]))[0]
+    nz = len(zsel)
+
+    if nz == 0:
+      print '0 galaxies in %f<z<%f found for %s' % (zrange[0],zrange[1],surveyarr[s_i])
+      continue
+    
+    print '%d objects in %s' % (nz, surveyarr[s_i])
+
+    for jj in range(nz):
+      specfile = glob.glob('%s%s/1D/sc_%d*atm_clean*' % (datadir,surveyarr[s_i],specid[jj]))
+      if len(specfile) == 1:
+        h = fits.open(specfile[0])
+        fl = h[0].data
+        ww   = h[0].header['CRVAL1'] + h[0].header['CDELT1'] * np.arange(2,h[0].header['NAXIS1']+2)
+        nww = len(ww)
+        flux = np.zeros([nww,2])
+        flux[:,0] = fl
+
+        specout.append({'flux': flux, 'w':ww,'z':zarr[jj],'survey':'VVDS-'+surveyarr[s_i],'file':specfile})
+        h.close()
+
+
+
+  return specout
+
+  
+
 
 
 

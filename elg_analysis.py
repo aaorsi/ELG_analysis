@@ -27,19 +27,24 @@ matplotlib.rcParams['figure.figsize'] = (12,10)
 LoadELGs        = True   # Overrides ELG generation, and reads it from a python file.
 fout = '%s/out/elgs.dat' % elgdir
 
+
 AddedPlots      = False  # Plot added stuff
-LoadCatalogues  = True  # Should be true most of the time
+LoadCatalogues  = False  # Should be true most of the time
 PlotComposite   = False
-ZpLephare       = True  # Recalibrate zero points using Lephare
-FindXMatches    = True # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
-UseSDSSBB       = True  # Use SDSS Broad band filters instead of J-PLUS
-PlotColCol      = True # Plot the colour-colour selection of ELG candidates
+ZpLephare       = False  # Recalibrate zero points using Lephare
+FindXMatches    = False # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
+UseSDSSBB       = False  # Use SDSS Broad band filters instead of J-PLUS
+PlotColCol      = False # Plot the colour-colour selection of ELG candidates
 PlotColMags     = False # Plot color-magnitude diagrams
-MakeELGsel      = True  # Create an ELG selection
-GetPhotoz       = True # Get photometric redshifts with LePhare
-ComputeTwoP     = True  # Compute the angular correlation function of the catalogue
+MakeELGsel      = False  # Create an ELG selection
+GetPhotoz       = False # Get photometric redshifts with LePhare
+ComputeTwoP     = False  # Compute the angular correlation function of the catalogue
 
 BrowseObjImages = False  # Opens a browser with the object image of each candidate
+
+GetTrainSet     = True
+LoadTrainSet    = True
+tfout = '%s/out/trainspec.dat' % elgdir
 
 
 if PlotComposite:
@@ -58,13 +63,13 @@ if PlotComposite:
   plt.show()
 
 
-if LoadCatalogues and LoadELGs is False:
+if LoadCatalogues:
   mag_excess = "AND (m.MAG_APER_3_0[jplus::rSDSS]- m.MAG_APER_3_0[jplus::J0660]) > 0"
   gal_jplus = jplus.datasets.fetch_jplus_objects(mag_type="aperMags", overwrite=False, 
                                                  object_name="allELGs", nchunks=10, mag_limit=[16,24],
                                                 extra_where_conds=mag_excess,db='test3')
 
-  gal_sdss  = jplus.datasets.fetch_sdss_qso(mag_type="aperMags", overwrite=False,mag_limit=[16,24])
+  gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,24])
   gal_phsdss  = jplus.datasets.fetch_sdss_photgalaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,22])
   gal_eboss = jplus.datasets.fetch_eboss_galaxies(mag_type="modelMags", overwrite=False,mag_limit=[16,24])
 
@@ -85,18 +90,20 @@ if LoadCatalogues and LoadELGs is False:
 
 
 
-if FindXMatches and LoadELGs is False:
+if FindXMatches:
   
-  sdssxeboss    = elg.find_xmatches(gal_sdss, gal_eboss, zcond=[.74,.76])
+  sdssxeboss    = elg.find_xmatches(gal_sdss, gal_eboss, zcond=[.74,.76],zcoord='redshift')
   gal_jplus_xx  = elg.find_xmatches(gal_jplus,sdssxeboss)
   gal_jplus_x   = elg.find_xmatches(gal_jplus, gal_eboss) 
-  
+  jplus_sdss    = elg.find_xmatches(gal_jplus,gal_sdss,zcoord='redshift')
+
   print 'Galaxies from eBOSS in JPLUS: ',len(gal_jplus_x['rJAVA'])
   print 'Galaxies in eBOSS, sdss Spec and J-PLUS:',len(gal_jplus_xx['rJAVA'])
-  print 'Galaxies in SDSS Spec and eBOSS Targets', len(sdssxeboss['zspec'])
+  print 'Galaxies in SDSS Spec and eBOSS Targets', len(sdssxeboss['redshift'])
+  #print 'Galaxies in SDSS Spec and JPLUS', len(jplus_sdss['redshift'])
 
 
-if UseSDSSBB and LoadELGs is False:
+if UseSDSSBB and LoadELGs == False:
   print 'Replacing J-PUS BBs with SDSS BBs...'
   d2,ind2 = jplus.tools.crossmatch_angular(gal_jplus['coords'],gal_phsdss['coords'],max_distance=3e-4)
   m2 = ((d2 != np.inf))
@@ -109,7 +116,7 @@ if UseSDSSBB and LoadELGs is False:
       gal_jplus[f_jplus][m2,:] = gal_phsdss[f_sdss][ind2[m2],:]
 
 
-if PlotColCol and LoadELGs is False:
+if PlotColCol and LoadELGs == False:
   ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus)
 # ijlim, rjlim = elg.plot_colcol_sdss_jplus(gal_sdss,gal_jplus,xaxis=['gJAVA','rJAVA'],yaxis=['iJAVA','zJAVA'])
 
@@ -127,9 +134,9 @@ if PlotColCol and LoadELGs is False:
   add_muse=False)
   """
 
+ijlim = 0.25
+rjlim = 0.25
 if MakeELGsel and LoadELGs is False:
-  ijlim = 0.5
-  rjlim = 0.5
   gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=False)  
 
   nelgs= len(gal_elgs['tile_id'])
@@ -144,6 +151,170 @@ if MakeELGsel and LoadELGs is False:
 if LoadELGs:
   gal_elgs = pickle.load(open(fout))
 
+  
+
+nelgs = len(gal_elgs['rJAVA'][:,0])
+
+
+if GetTrainSet:
+  
+  if LoadTrainSet:
+    alls       = pickle.load(open(tfout))
+    allspec    = alls['allspec']
+    photo_spec = alls['photo_spec']
+    nall = len(allspec)
+
+  else:
+    # Construct a training set of J-PLUS photometry for ELGs at different redshifts
+    # using SDSS, eBOSS, MUSE and VVDS.
+
+    #             Ha    OII     OIII   OII    Hb
+    
+    j0660 = jplus.datasets.fetch_jplus_filter('J0660')
+    
+    linelist = np.array([6563.0, 3727.0,5007.,4861.0])
+    nline = len(linelist)
+    
+    allspec = []
+
+    sdss_jplusphot = []
+
+    for il in range(nline):
+    
+      zr = elg.zline(linelist[il],j0660.wave,j0660.throughput)
+      
+      muse_spec   = elg.get_musewide_spec(zr)
+      eboss_spec  = elg.get_eboss_spec(zr)
+      vvds_spec   = elg.get_vvds_spec(zr)
+
+      nmuse = len(muse_spec)
+      neboss = len(eboss_spec)
+      nvvds = len(vvds_spec)
+
+      for im in range(nmuse):
+        allspec.append(muse_spec[im])
+
+      for im in range(neboss):
+        allspec.append(eboss_spec[im])
+        
+      for im in range(nvvds):
+        allspec.append(vvds_spec[im])
+
+    
+    nall = len(allspec)
+    print '%d spectra from all surveys' % nall
+    print 'Convolving spectra with J-PLUS filters...'
+    photo_spec = []
+  #  plt.figure(6)
+
+    for i in range(nall):
+      conv = jplus.datasets.compute_jplus_photometry_singlespec(allspec[i])
+      photo_spec.append(conv)
+
+    print 'writing original spec file'
+    dicspec = {'allspec':allspec,'photo_spec':photo_spec}
+    with open(tfout,'wb') as outfile:
+      pickle.dump(dicspec,outfile,protocol=pickle.HIGHEST_PROTOCOL)
+
+#    plt.plot(allspec[i]['w'],allspec[i]['flux'])
+
+#    for band in photo_spec[i].iterkeys():
+#      filt = jplus.datasets.fetch_jplus_filter(band)
+#      w = filt.avgwave()
+#      val = photo_spec[i][band]
+#      plt.plot([w,w],[val,val],'o')
+
+#    plt.ylim([30,15])
+#    plt.title(r'%s' % allspec[i]['survey'])
+#    plt.text(6000,20,'z= %f' % allspec[i]['z'])
+#    plt.show()
+
+
+  subtrain = [] # This contains the convolved spectra of suitable objects
+  zzlist   = []
+  for i in range(nall):
+
+    nozero        = ((photo_spec[i]['J0660'] != 99) &
+#                    (photo_spec[i]['gJAVA'] != 99) &
+                    (photo_spec[i]['rJAVA'] != 99) & 
+                    (photo_spec[i]['iJAVA'] != 99)) 
+#                    (photo_spec[i]['zJAVA'] != 99) &
+#                    (photo_spec[i]['J0861'] != 99)) 
+
+    maglimits     = ((photo_spec[i]['rJAVA'] - photo_spec[i]['J0660'] > rjlim) or
+                    (photo_spec[i]['iJAVA'] - photo_spec[i]['J0660'] > ijlim))
+
+   
+    if nozero and maglimits:
+      subtrain.append(photo_spec[i])
+      zzlist.append(allspec[i]['z'])
+
+  ntrain = len(subtrain)
+  print 'number of objects in training set: %d' % ntrain
+ 
+
+  from sklearn.neural_network import MLPRegressor
+  from sklearn.preprocessing import StandardScaler 
+  from sklearn import tree
+  from sklearn import svm
+
+  Colors_arr = []
+  z_arr      = []
+
+  # preparing training data
+  for i in range(ntrain):
+    Colors_arr.append([subtrain[i]['rJAVA'] - subtrain[i]['J0660'], 
+                       subtrain[i]['iJAVA'] - subtrain[i]['J0660'], 
+                       subtrain[i]['rJAVA'] - subtrain[i]['iJAVA']])
+
+    z_arr.append(zzlist[i])
+
+
+  scaler = StandardScaler()
+  scaler.fit(Colors_arr)
+  Colors_arr = scaler.transform(Colors_arr)
+
+  
+  # preparing jplus elg data
+  Colors_elgs = []
+  for i in range(nelgs):
+    Colors_elgs.append([gal_elgs['rJAVA'][i,0] - gal_elgs['J0660'][i,0], 
+                       gal_elgs['iJAVA'][i,0] - gal_elgs['J0660'][i,0], 
+                       gal_elgs['rJAVA'][i,0] - gal_elgs['iJAVA'][i,0]])
+
+
+
+
+  Colors_elgs = scaler.transform(Colors_elgs) 
+
+  clf         = MLPRegressor(solver='adam')
+  clf         = clf.fit(Colors_arr,z_arr)
+  zelgs_neural= clf.predict(Colors_elgs)
+
+  t_clf       = tree.DecisionTreeRegressor()
+  t_clf       = t_clf.fit(Colors_arr,z_arr)
+  zelgs_tree  = t_clf.predict(Colors_elgs)
+  
+  s_clf       = svm.SVR()
+  s_clf       = s_clf.fit(Colors_arr,z_arr)
+  zelgs_svr   = s_clf.predict(Colors_elgs)
+
+
+  
+  import matplotlib.pyplot as plt
+
+
+  plt.hist(zelgs_neural,200,range=[0,1],label='Neural z ELGs',normed=True,color='blue')
+  plt.hist(zelgs_tree,200,range=[0,1],label='Decision tree z ELGs',normed=True,color='red')
+  plt.hist(zelgs_svr,200,range=[0,1],label='SVR z ELGs',normed=True,color='magenta')
+  plt.hist(z_arr,200,range=[0,1],label='Training set',normed=True,color='green')
+  plt.legend()
+  
+  plt.show()
+  
+  
+  
+  import ipdb ; ipdb.set_trace()
 
 
 if GetPhotoz:
