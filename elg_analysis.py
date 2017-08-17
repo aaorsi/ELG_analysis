@@ -43,7 +43,7 @@ ComputeTwoP     = False  # Compute the angular correlation function of the catal
 BrowseObjImages = False  # Opens a browser with the object image of each candidate
 
 GetTrainSet     = True
-OverwriteTrainSet = True
+OverwriteTrainSet = False
 EstimatorType   = 'Classifier'  #Regression [it uses zspec] or Classifier [linename] 
 
 
@@ -159,7 +159,7 @@ print 'Total number of OII emitter candidates: %d' % nelgs
 
 if GetTrainSet:
   
-  allspec, photo_spec = learn.LoadSample(tfout,overwrite=OverwriteTrainSet)
+  allspec, photo_spec = learn.LoadSample(tfout,overwrite=OverwriteTrainSet,sdssxjplus=True)
   subtrain, zzlist, namelist = learn.apply_condition(photo_spec, allspec,rjlim = rjlim, ijlim = ijlim)
   
   Colors_train = learn.prepare_sample(subtrain)

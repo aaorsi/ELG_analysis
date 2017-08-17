@@ -282,7 +282,7 @@ add_muse = True, add_composite=True, add_sdsszline = True):
   return ijlim,rjlim
 
 
-def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec'):
+def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec',getz=True):
 # Returns a cross-match between 2 galaxy catalogues
 # zcond can receive a 2-element list specifying a redshift range to apply to gal_orig.
 # zcoord is the name of the redshift coordinate in gal_orig.
@@ -296,6 +296,10 @@ def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec'):
   d2,ind2 = jplus.tools.crossmatch_angular(galcat['coords'],gal_match['coords'],max_distance=3e-4)
   m2 = ((d2 != np.inf))
   xmatch = jplus.tools.select_object(galcat,m2)
+  
+  if getz:
+    match_clean = jplus.tools.select_object(gal_match, ind2[m2])
+    xmatch[zcoord] = match_clean[zcoord]
 
   return xmatch
 

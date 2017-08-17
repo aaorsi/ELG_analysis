@@ -23,7 +23,7 @@ spec_elg = jplus.datasets.fetch_eboss_elg_composite()
 matplotlib.rcParams['figure.figsize'] = (12,10)
 
 
-def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x'):
+def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False):
   filt = jplus.datasets.fetch_jplus_filter(filtername)
   
   if linelist == 'x': 
@@ -87,12 +87,52 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
       conv = jplus.datasets.compute_jplus_photometry_singlespec(allspec[i])
       photo_spec.append(conv)
 
+    if sdssxjplus:
+    # Adding jplus magnitudes of xmatches with SDSS spectra
+      print 'Loading SDSS-SpecObj and JPLUS catalogues ...'
+      gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", 
+      overwrite=False,mag_limit=[16,24])
+      
+      mag_excess = "AND (m.MAG_APER_3_0[jplus::rSDSS]- m.MAG_APER_3_0[jplus::J0660]) > 0"
+      gal_jplus = jplus.datasets.fetch_jplus_objects(mag_type="aperMags", overwrite=False, 
+                                                 object_name="allELGs", nchunks=10, mag_limit=[16,24],
+                                                extra_where_conds=mag_excess,db='test3')
+
+      print 'done with that.'
+      allxmatch = elg.find_xmatches(gal_jplus, gal_sdss,zcoord='redshift')
+      
+      for il in range(nline):
+        zr = elg.zline(linelist[il],filt.wave,filt.throughput)
+        zsel = np.where((allxmatch['redshift'] > zr[0] ) & (allxmatch['redshift'] < zr[1]))[0]
+        nzsel = len(zsel)
+        print '%d galaxies from SDSS-Spec at %f<z<%f' % (nzsel, zr[0],zr[1])
+        if nzsel > 0:
+          for jj in range(nzsel):
+            idd = zsel[jj]
+            allspec.append({'z': allxmatch['redshift'][idd], 'name':linename[il]})
+            
+            magjj = {}
+            for kk in allxmatch.keys():
+              nll = len(allxmatch[kk])
+              if nll < idd:
+                magjj[kk] = allxmatch[kk] # Stores things like the date
+              else:
+                magjj[kk] = allxmatch[kk][idd]
+
+            photo_spec.append(magjj)
+
+           
+
+
     mag_spec = {}
     
     for i in photo_spec[0].keys():
       mag_ = np.zeros([nall,2])
       for j in range(nall):
-        mag_[j,0] = photo_spec[j][i]
+        if 'date' in photo_spec[j]: # SDSS-Spec 
+          mag_[j,0] = photo_spec[j][i,0]
+        else:
+          mag_[j,0] = photo_spec[j][i]
 
       mag_spec[i] = mag_
 
