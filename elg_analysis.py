@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gsc
 
 import elgtools as elg
-
+import learn_elgs as learn
 import pickle
 
 jplus.plotting.setup_text_plots(fontsize=10,usetex=True)
@@ -43,7 +43,10 @@ ComputeTwoP     = False  # Compute the angular correlation function of the catal
 BrowseObjImages = False  # Opens a browser with the object image of each candidate
 
 GetTrainSet     = True
-LoadTrainSet    = True
+OverwriteTrainSet = True
+EstimatorType   = 'Classifier'  #Regression [it uses zspec] or Classifier [linename] 
+
+
 tfout = '%s/out/trainspec.dat' % elgdir
 
 
@@ -139,8 +142,6 @@ rjlim = 0.25
 if MakeELGsel and LoadELGs is False:
   gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=False)  
 
-  nelgs= len(gal_elgs['tile_id'])
-  print 'Total number of OII emitter candidates: %d' % nelgs
   
   with open(fout,'wb') as outfile:
     pickle.dump(gal_elgs,outfile,protocol=pickle.HIGHEST_PROTOCOL)
@@ -152,169 +153,20 @@ if LoadELGs:
   gal_elgs = pickle.load(open(fout))
 
   
-
-nelgs = len(gal_elgs['rJAVA'][:,0])
+nelgs= len(gal_elgs['tile_id'])
+print 'Total number of OII emitter candidates: %d' % nelgs
 
 
 if GetTrainSet:
   
-  if LoadTrainSet:
-    alls       = pickle.load(open(tfout))
-    allspec    = alls['allspec']
-    photo_spec = alls['photo_spec']
-    nall = len(allspec)
-
-  else:
-    # Construct a training set of J-PLUS photometry for ELGs at different redshifts
-    # using SDSS, eBOSS, MUSE and VVDS.
-
-    #             Ha    OII     OIII   OII    Hb
-    
-    j0660 = jplus.datasets.fetch_jplus_filter('J0660')
-    
-    linelist = np.array([6563.0, 3727.0,5007.,4861.0])
-    nline = len(linelist)
-    
-    allspec = []
-
-    sdss_jplusphot = []
-
-    for il in range(nline):
-    
-      zr = elg.zline(linelist[il],j0660.wave,j0660.throughput)
-      
-      muse_spec   = elg.get_musewide_spec(zr)
-      eboss_spec  = elg.get_eboss_spec(zr)
-      vvds_spec   = elg.get_vvds_spec(zr)
-
-      nmuse = len(muse_spec)
-      neboss = len(eboss_spec)
-      nvvds = len(vvds_spec)
-
-      for im in range(nmuse):
-        allspec.append(muse_spec[im])
-
-      for im in range(neboss):
-        allspec.append(eboss_spec[im])
-        
-      for im in range(nvvds):
-        allspec.append(vvds_spec[im])
-
-    
-    nall = len(allspec)
-    print '%d spectra from all surveys' % nall
-    print 'Convolving spectra with J-PLUS filters...'
-    photo_spec = []
-  #  plt.figure(6)
-
-    for i in range(nall):
-      conv = jplus.datasets.compute_jplus_photometry_singlespec(allspec[i])
-      photo_spec.append(conv)
-
-    print 'writing original spec file'
-    dicspec = {'allspec':allspec,'photo_spec':photo_spec}
-    with open(tfout,'wb') as outfile:
-      pickle.dump(dicspec,outfile,protocol=pickle.HIGHEST_PROTOCOL)
-
-#    plt.plot(allspec[i]['w'],allspec[i]['flux'])
-
-#    for band in photo_spec[i].iterkeys():
-#      filt = jplus.datasets.fetch_jplus_filter(band)
-#      w = filt.avgwave()
-#      val = photo_spec[i][band]
-#      plt.plot([w,w],[val,val],'o')
-
-#    plt.ylim([30,15])
-#    plt.title(r'%s' % allspec[i]['survey'])
-#    plt.text(6000,20,'z= %f' % allspec[i]['z'])
-#    plt.show()
-
-
-  subtrain = [] # This contains the convolved spectra of suitable objects
-  zzlist   = []
-  for i in range(nall):
-
-    nozero        = ((photo_spec[i]['J0660'] != 99) &
-#                    (photo_spec[i]['gJAVA'] != 99) &
-                    (photo_spec[i]['rJAVA'] != 99) & 
-                    (photo_spec[i]['iJAVA'] != 99)) 
-#                    (photo_spec[i]['zJAVA'] != 99) &
-#                    (photo_spec[i]['J0861'] != 99)) 
-
-    maglimits     = ((photo_spec[i]['rJAVA'] - photo_spec[i]['J0660'] > rjlim) or
-                    (photo_spec[i]['iJAVA'] - photo_spec[i]['J0660'] > ijlim))
-
-   
-    if nozero and maglimits:
-      subtrain.append(photo_spec[i])
-      zzlist.append(allspec[i]['z'])
-
-  ntrain = len(subtrain)
-  print 'number of objects in training set: %d' % ntrain
- 
-
-  from sklearn.neural_network import MLPRegressor
-  from sklearn.preprocessing import StandardScaler 
-  from sklearn import tree
-  from sklearn import svm
-
-  Colors_arr = []
-  z_arr      = []
-
-  # preparing training data
-  for i in range(ntrain):
-    Colors_arr.append([subtrain[i]['rJAVA'] - subtrain[i]['J0660'], 
-                       subtrain[i]['iJAVA'] - subtrain[i]['J0660'], 
-                       subtrain[i]['rJAVA'] - subtrain[i]['iJAVA']])
-
-    z_arr.append(zzlist[i])
-
-
-  scaler = StandardScaler()
-  scaler.fit(Colors_arr)
-  Colors_arr = scaler.transform(Colors_arr)
-
+  allspec, photo_spec = learn.LoadSample(tfout,overwrite=OverwriteTrainSet)
+  subtrain, zzlist, namelist = learn.apply_condition(photo_spec, allspec,rjlim = rjlim, ijlim = ijlim)
   
-  # preparing jplus elg data
-  Colors_elgs = []
-  for i in range(nelgs):
-    Colors_elgs.append([gal_elgs['rJAVA'][i,0] - gal_elgs['J0660'][i,0], 
-                       gal_elgs['iJAVA'][i,0] - gal_elgs['J0660'][i,0], 
-                       gal_elgs['rJAVA'][i,0] - gal_elgs['iJAVA'][i,0]])
+  Colors_train = learn.prepare_sample(subtrain)
+  Colors_test  = learn.prepare_sample(gal_elgs)
 
+  elgs_learn_arr  = learn.learning_elgs(Colors_train, namelist, Colors_test, EstimatorType = 'Classifier')
 
-
-
-  Colors_elgs = scaler.transform(Colors_elgs) 
-
-  clf         = MLPRegressor(solver='adam')
-  clf         = clf.fit(Colors_arr,z_arr)
-  zelgs_neural= clf.predict(Colors_elgs)
-
-  t_clf       = tree.DecisionTreeRegressor()
-  t_clf       = t_clf.fit(Colors_arr,z_arr)
-  zelgs_tree  = t_clf.predict(Colors_elgs)
-  
-  s_clf       = svm.SVR()
-  s_clf       = s_clf.fit(Colors_arr,z_arr)
-  zelgs_svr   = s_clf.predict(Colors_elgs)
-
-
-  
-  import matplotlib.pyplot as plt
-
-
-  plt.hist(zelgs_neural,200,range=[0,1],label='Neural z ELGs',normed=True,color='blue')
-  plt.hist(zelgs_tree,200,range=[0,1],label='Decision tree z ELGs',normed=True,color='red')
-  plt.hist(zelgs_svr,200,range=[0,1],label='SVR z ELGs',normed=True,color='magenta')
-  plt.hist(z_arr,200,range=[0,1],label='Training set',normed=True,color='green')
-  plt.legend()
-  
-  plt.show()
-  
-  
-  
-  import ipdb ; ipdb.set_trace()
 
 
 if GetPhotoz:

@@ -301,7 +301,7 @@ def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec'):
 
 
 
-def get_musewide_spec(zrange,strong=None):
+def get_musewide_spec(zrange,strong=None,name=''):
 # downloads muse 1d spectra of objects at a given z-range and returns the spectra
 # strong = 'O2', 'O3', etc... select objects with that primary line. None selects them all
 
@@ -359,7 +359,8 @@ def get_musewide_spec(zrange,strong=None):
     flux[:,0] = ff * 1e-20
 
 
-    speclist.append({'flux':flux,'w':ww,'z':data['Z'][iz[i]],'survey':'MUSE-Wide','file':sfile})
+    speclist.append({'flux':flux,'w':ww,'z':data['Z'][iz[i]],'survey':'MUSE-Wide',
+    'file':sfile,'name':name})
     dd.close()
 
     
@@ -367,7 +368,7 @@ def get_musewide_spec(zrange,strong=None):
 
 
 
-def get_eboss_spec(zrange,typegal="'GALAXY'"):
+def get_eboss_spec(zrange,typegal="'GALAXY'",name=''):
 # Returns a list of spectra from eBOSS galaxies already downloaded
 #
   from astropy.io import fits
@@ -415,13 +416,14 @@ def get_eboss_spec(zrange,typegal="'GALAXY'"):
     flux[:,0] = ff
 
     hdu.close()
-    specout.append({'flux':flux,'w':ww,'z':zlist[jj],'survey':'eBOSS','file':ffile})
+    specout.append({'flux':flux,'w':ww,'z':zlist[idj],'survey':'eBOSS',
+    'file':ffile,'name':name})
     
   print '%d spectra recorded.' % ns
   return specout
 
 
-def get_vvds_spec(zrange,survey = 'All'):
+def get_vvds_spec(zrange,survey = 'All',name=''):
 # Returns a list of spectra from all VVDS surveys.
 
   from astropy.io import fits
@@ -453,7 +455,7 @@ def get_vvds_spec(zrange,survey = 'All'):
     print '%d objects in %s' % (nz, surveyarr[s_i])
 
     for jj in range(nz):
-      specfile = glob.glob('%s%s/1D/sc_%d*atm_clean*' % (datadir,surveyarr[s_i],specid[jj]))
+      specfile = glob.glob('%s%s/1D/sc_%d*atm_clean*' % (datadir,surveyarr[s_i],specid[zsel[jj]]))
       if len(specfile) == 1:
         h = fits.open(specfile[0])
         fl = h[0].data
@@ -462,7 +464,8 @@ def get_vvds_spec(zrange,survey = 'All'):
         flux = np.zeros([nww,2])
         flux[:,0] = fl
 
-        specout.append({'flux': flux, 'w':ww,'z':zarr[jj],'survey':'VVDS-'+surveyarr[s_i],'file':specfile})
+        specout.append({'flux': flux, 'w':ww,'z':zarr[zsel[jj]],'survey':'VVDS-'+surveyarr[s_i],
+        'file':specfile,'name':name})
         h.close()
 
 
