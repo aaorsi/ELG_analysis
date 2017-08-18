@@ -23,7 +23,7 @@ spec_elg = jplus.datasets.fetch_eboss_elg_composite()
 matplotlib.rcParams['figure.figsize'] = (12,10)
 
 
-def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False):
+def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False):
   filt = jplus.datasets.fetch_jplus_filter(filtername)
   
   if linelist == 'x': 
@@ -36,8 +36,12 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
   allspec = []
 
   for il in range(nline):
-  
-    zr = elg.zline(linelist[il],filt.wave,filt.throughput)
+    
+    if zrange:
+      zr = zrange
+    else:
+      zr = elg.zline(linelist[il],filt.wave,filt.throughput)
+    
     print zr
     
     meanzline[il] = np.mean(zr)
@@ -56,8 +60,11 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
     #             Ha    OII     OIII   OII    Hb
     
     for il in range(nline):
-    
-      zr = elg.zline(linelist[il],filt.wave,filt.throughput)
+   
+      if zrange:
+        zr = zrange
+      else:
+        zr = elg.zline(linelist[il],filt.wave,filt.throughput)
 
       muse_spec   = elg.get_musewide_spec(zr,name=linename[il])
       eboss_spec  = elg.get_eboss_spec(zr,name=linename[il])

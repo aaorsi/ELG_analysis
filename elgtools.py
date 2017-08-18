@@ -139,8 +139,8 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
   return gal_cand
  
 def zline(lam_line, wf,tf):  # finds the redshift range of a line in a given filter 
-  w10 = misc.quantile(wf, tf, 0.02)
-  w90 = misc.quantile(wf, tf, 0.98)
+  w10 = misc.quantile(wf, tf, 0.01)
+  w90 = misc.quantile(wf, tf, 0.99)
 
   z10 = (w10 - lam_line) / lam_line
   z90 = (w90 - lam_line) / lam_line
@@ -445,7 +445,8 @@ def get_vvds_spec(zrange,survey = 'All',name=''):
 
   for s_i in range(nsurvey):  # loops over each survey
     fdata = '%scesam_vvds_sp%s.txt' % (datadir, surveyarr[s_i])
-    specid, zarr = np.loadtxt(fdata,unpack=True,usecols=(0,4))
+    zcol = 5 if surveyarr[s_i] == 'F02_UDEEP' else 4
+    specid, zarr = np.loadtxt(fdata,unpack=True,usecols=(0,zcol))
     #zarr = dd[4]
     #specid = dd[0]
 
