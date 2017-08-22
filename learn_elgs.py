@@ -219,7 +219,6 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
   linename = np.unique(Trainfeature)
   nline = len(linename)
 
-  mlcolors = plt.cm.Set1(np.linspace(0.,1,10))
 
   from sklearn.neural_network import MLPRegressor
   from sklearn.preprocessing import StandardScaler 
@@ -230,6 +229,9 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
   from sklearn.ensemble import RandomForestClassifier
   from sklearn.gaussian_process import GaussianProcessClassifier
   from sklearn.gaussian_process.kernels import RBF
+
+  from sklearn.linear_model import LogisticRegression
+
 
   if Scale:
     scaler = StandardScaler()
@@ -262,60 +264,57 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
   if EstimatorType == 'Classifier':
 
     C = 1.0
-    kernel = 1.0 * RBF([1.0,1.0]) # for GPC
+    kernel = 1.0 * RBF([1.0,1.0,1.0,1.0,1.0,1.0]) # for GPC
 
     classifiers = { 'MLP'                       : MLPClassifier(solver='lbfgs'), 
                     'Random Forest'             : RandomForestClassifier(n_estimators=10),
-                    'SVC'                       : SVC(),
+                    'SVC'                       : svm.SVC(),
                     'L1 logistic'               : LogisticRegression(C=C, penalty='l1'),
                     'L2 logistic (OvR)'         : LogisticRegression(C=C, penalty='l2'),
                     'L2 logistic (Multinomial)' : LogisticRegression(C=C, solver='lbfgs',multi_class='multinomial'),
                     'GPC'                       : GaussianProcessClassifier(kernel)
                     }
 
+    nclass = float(len(classifiers))
+    mlcolors = plt.cm.Set1(np.linspace(0.,1,nclass))
+
+    predict = {}
+    fig, ax = plt.subplots()
+  
     for index, (name, classifier) in enumerate(classifiers.items()):
     
       classifier.fit(Traindata, Trainfeature)
       y_pred = classifier.predict(Testdata)
-      classif_rate = np.mean(y_pred.ravel() == y.ravel()) * 100.0
+      classif_rate = np.mean(y_pred.ravel() == y_pred.ravel()) * 100.0
       print "classif_rate for %s: %f" % (name, classif_rate)
-      
-      probas = classifier.predict_proba(
 
       
-    totlines_train    = np.zeros(nline) 
-    totlines_neural   = np.zeros(nline)
-    totlines_rforest  = np.zeros(nline)
-    totlines_svm      = np.zeros(nline)
+      totlines_train        = np.zeros(nline) 
+      totlines_classifier   = np.zeros(nline)
 
-    for il in range(nline):
-      totlines_train[il]    = np.float(len(np.where(np.array(Trainfeature) == linename[il])[0]))/ntrain
-      totlines_neural[il]   = np.float(len(np.where(lelgs_neural == linename[il])[0]))/nelgs
-      totlines_rforest[il]  = np.float(len(np.where(lelgs_rforest == linename[il])[0]))/nelgs
-      totlines_svm[il]      = np.float(len(np.where(lelgs_svm == linename[il])[0]))/nelgs
+      for il in range(nline):
+        if index == 0:
+          totlines_train[il]        = np.float(len(np.where(np.array(Trainfeature) == linename[il])[0]))/ntrain
+        totlines_classifier[il]   = np.float(len(np.where(y_pred == linename[il])[0]))/nelgs
 
- 
-    if Plot:
-      width=0.35
-      fig, ax = plt.subplots()
+      predict[name] = y_pred
+
+      if Plot:
+        width   = 0.35
     
-      ax.bar(np.arange(nline),totlines_train,width/3.,label='Training set',color='gray')
-      ax.bar(np.arange(nline) + width/3.,totlines_neural,width/3.,label='NN ELGs',
-      color=mlcolors[0],alpha=.85)
+        if index == 0:
+          ax.bar(np.arange(nline),totlines_train,width/nclass,label='Training set',color='gray',hatch='xxx')
+        
+        ax.bar(np.arange(nline) + (index+1) * width/nclass,totlines_classifier,width/nclass,label=name,
+             color=mlcolors[index],alpha=.85)
       
-      ax.bar(np.arange(nline) + 2*width/3.,totlines_rforest,width/3.,label='Random forest ELGs',
-      color=mlcolors[1],alpha=.85)
-      
-      ax.bar(np.arange(nline) + width,totlines_svm,width/3.,label='SVM ELGs',
-      color=mlcolors[2],alpha=.85)
-      
-      ax.set_xticks(np.arange(nline) + width)
-      ax.set_xticklabels((linename))
-      ax.legend(loc='upper left')
-      plt.savefig('learn_elgs.pdf',bbox_inches='tight')
+        ax.set_xticks(np.arange(nline) + width/2.)
+        ax.set_xticklabels((linename))
+        ax.legend(loc='upper left')
   
   
-  return [totlines_neural, totlines_rforest, totlines_svm]
+    plt.savefig('learn_elgs.pdf',bbox_inches='tight')
+  return predict
 
    
   
