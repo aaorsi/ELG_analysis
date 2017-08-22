@@ -482,7 +482,7 @@ def get_vvds_spec(zrange,survey = 'All',name=''):
 
 
 
-def get_elg_photoz(gal_elgs):
+def get_elg_photoz(gal_elgs,noJ0660 = False,overwrite = True):
 #2) Run LePhare on JPLUS Broad-band photometry, recalibrating tile by tile
   
   matplotlib.rcParams['figure.figsize'] = (8,6)
@@ -490,14 +490,17 @@ def get_elg_photoz(gal_elgs):
   #m2 = ((d != np.inf))
   #elg_eboss = jplus.tools.select_object(gal_elgs,m2)
 
-  #for dset in [gal_elgs, elg_eboss]:
-  #    for ifilter in jplus.datasets.jplus_filter_names():
-  #        if ifilter in elg_eboss:
-  #            ind = np.isfinite(dset[ifilter][:,0])
-  #            dset[ifilter][~ind,:] = [-99,-99]
-  #            dset[ifilter][dset[ifilter][:,0]==99,:] = [-99,-99]
-  #            dset[ifilter][dset[ifilter][:,0]==0,:] = [-99,-99]
-  #        
+  for ifilter in jplus.datasets.jplus_filter_names():
+    if ifilter in gal_elgs:
+      ind = np.isfinite(gal_elgs[ifilter][:,0])
+      gal_elgs[ifilter][~ind,:] = [-99,-99]
+      gal_elgs[ifilter][gal_elgs[ifilter][:,0]==99,:] = [-99,-99]
+      gal_elgs[ifilter][gal_elgs[ifilter][:,0]==0,:] = [-99,-99]
+      
+      gal_elgs[ifilter][gal_elgs[ifilter][:,1]==0,1] = 0.1
+      
+
+  import pdb ; pdb.set_trace()
   #for ifilter in jplus.datasets.jplus_filter_names():
   #    print ifilter
       #print elg_eboss[ifilter] 
@@ -509,23 +512,28 @@ def get_elg_photoz(gal_elgs):
   #elg_eboss['redshift'] = np.zeros(len(elg_eboss['rJAVA'][:,0]))
   gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
 
-  Lephare_bb = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
+  if noJ0660:
+
+    Lephare_noha = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
                                  filterflag=bbfilters,
                                  suffix='_elg_eboss',emlines=True,filename='noJ0660')
 
-  Lephare_bb.prepare(overwrite=True)
-  jp_photoz_bb = Lephare_bb.run(overwrite=True)
+    Lephare_noha.prepare(overwrite=True)
+    jp_photoz_noha = Lephare_noha.run(overwrite=True)
 
   Lephare_all = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
                                  filterflag=allfilters,
                                  suffix='_elg_eboss',emlines=True,filename='allfilters')
 
-  Lephare_all.prepare(overwrite=False)
-  jp_photoz_all = Lephare_all.run(overwrite=False)
+  Lephare_all.prepare(overwrite=overwrite)
+  jp_photoz_all = Lephare_all.run(overwrite=overwrite)
 
-  #plt.hist(jp_photoz_broad['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='broad band photo-z')
+  if noJ0660:
+    plt.hist(jp_photoz_noha['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='No J0660')
+  
   plt.hist(jp_photoz_all['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='red',label = 'all filters photo-z')
-
+  
+  plt.xlabel('redshift')
 
   plt.legend()
   plt.savefig('photoz.pdf',bbox_inches='tight')

@@ -228,7 +228,9 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
 
   from sklearn.neural_network import MLPClassifier
   from sklearn.ensemble import RandomForestClassifier
-  
+  from sklearn.gaussian_process import GaussianProcessClassifier
+  from sklearn.gaussian_process.kernels import RBF
+
   if Scale:
     scaler = StandardScaler()
     scaler.fit(Traindata)
@@ -258,19 +260,29 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
     plt.show()
 
   if EstimatorType == 'Classifier':
+
+    C = 1.0
+    kernel = 1.0 * RBF([1.0,1.0]) # for GPC
+
+    classifiers = { 'MLP'                       : MLPClassifier(solver='lbfgs'), 
+                    'Random Forest'             : RandomForestClassifier(n_estimators=10),
+                    'SVC'                       : SVC(),
+                    'L1 logistic'               : LogisticRegression(C=C, penalty='l1'),
+                    'L2 logistic (OvR)'         : LogisticRegression(C=C, penalty='l2'),
+                    'L2 logistic (Multinomial)' : LogisticRegression(C=C, solver='lbfgs',multi_class='multinomial'),
+                    'GPC'                       : GaussianProcessClassifier(kernel)
+                    }
+
+    for index, (name, classifier) in enumerate(classifiers.items()):
     
-    clf           = MLPClassifier(solver='lbfgs')
-    clf.fit(Traindata,Trainfeature)
-    lelgs_neural  = clf.predict(Testdata) 
+      classifier.fit(Traindata, Trainfeature)
+      y_pred = classifier.predict(Testdata)
+      classif_rate = np.mean(y_pred.ravel() == y.ravel()) * 100.0
+      print "classif_rate for %s: %f" % (name, classif_rate)
+      
+      probas = classifier.predict_proba(
 
-    clf           = RandomForestClassifier(n_estimators=10)
-    clf           = clf.fit(Traindata,Trainfeature)
-    lelgs_rforest = clf.predict(Testdata)
-
-    clf           = svm.SVC()
-    clf           = clf.fit(Traindata,Trainfeature)
-    lelgs_svm     = clf.predict(Testdata)
-  
+      
     totlines_train    = np.zeros(nline) 
     totlines_neural   = np.zeros(nline)
     totlines_rforest  = np.zeros(nline)
@@ -300,9 +312,8 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
       ax.set_xticks(np.arange(nline) + width)
       ax.set_xticklabels((linename))
       ax.legend(loc='upper left')
-      plt.show()
+      plt.savefig('learn_elgs.pdf',bbox_inches='tight')
   
-  import ipdb ; ipdb.set_trace()
   
   return [totlines_neural, totlines_rforest, totlines_svm]
 

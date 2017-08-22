@@ -32,12 +32,12 @@ AddedPlots      = False  # Plot added stuff
 LoadCatalogues  = False  # Should be true most of the time
 PlotComposite   = False
 ZpLephare       = False  # Recalibrate zero points using Lephare
-FindXMatches    = False # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
+FindXMatches    = False  # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
 UseSDSSBB       = False  # Use SDSS Broad band filters instead of J-PLUS
-PlotColCol      = False # Plot the colour-colour selection of ELG candidates
-PlotColMags     = False # Plot color-magnitude diagrams
+PlotColCol      = False  # Plot the colour-colour selection of ELG candidates
+PlotColMags     = False  # Plot color-magnitude diagrams
 MakeELGsel      = False  # Create an ELG selection
-GetPhotoz       = False # Get photometric redshifts with LePhare
+GetPhotoz       = False   # Get photometric redshifts with LePhare
 ComputeTwoP     = False  # Compute the angular correlation function of the catalogue
 
 BrowseObjImages = False  # Opens a browser with the object image of each candidate
@@ -167,11 +167,38 @@ if GetTrainSet:
 
   elgs_learn_arr  = learn.learning_elgs(Colors_train, namelist, Colors_test, EstimatorType = 'Classifier')
 
+  zphot_train = elg.get_elg_photoz(subtrain,overwrite=False)
+
+  plt.figure(666)
+
+  plt.plot(zphot_train['photoz'],np.array(zzlist),'o')
+  plt.xlabel('photo-z')
+  plt.ylabel('spec-z')
+  plt.xlim([0,1])
+  plt.ylim([0,1])
+  plt.savefig('photoz_zspec.pdf',bbox_inches='tight')
+
+  plt.figure(555)
+ 
+  gs = gsc.GridSpec(2,2)
+  gs.update(wspace=0.0,hspace=0.0)
+
+
+  ax = pl.subplot(gs[0,0])
+
+  
+
+
+
+  
 
 
 if GetPhotoz:
   zphot = elg.get_elg_photoz(gal_elgs)
   import pdb ; pdb.set_trace()
+
+
+
 
 if BrowseObjImages:
   import webbrowser as wb
