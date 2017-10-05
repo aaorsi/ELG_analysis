@@ -66,16 +66,16 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
       else:
         zr = elg.zline(linelist[il],filt.wave,filt.throughput)
 
-      muse_spec   = elg.get_musewide_spec(zr,name=linename[il])
+      #muse_spec   = elg.get_musewide_spec(zr,name=linename[il])
       eboss_spec  = elg.get_eboss_spec(zr,name=linename[il])
       vvds_spec   = elg.get_vvds_spec(zr,name=linename[il])
 
-      nmuse   = len(muse_spec)
+      #nmuse   = len(muse_spec)
       neboss  = len(eboss_spec)
       nvvds   = len(vvds_spec)
 
-      for im in range(nmuse):
-        allspec.append(muse_spec[im])
+      #for im in range(nmuse):
+      #  allspec.append(muse_spec[im])
 
       for im in range(neboss):
         allspec.append(eboss_spec[im])
@@ -193,21 +193,24 @@ def apply_condition(photo_spec, allspec,rjlim = 0.25, ijlim = 0.25):
   return subtrain, zzlist, namelist
 
 
-def prepare_sample(samp):
+def prepare_sample(samp,namefeatures = False):
 
   Colors_samp = []
   nsamp = len(samp['rJAVA'][:,0])
   for i in range(nsamp):
     Colors_samp.append([samp['rJAVA'][i,0] - samp['J0660'][i,0], 
-                       samp['iJAVA'][i,0] - samp['J0660'][i,0], 
-                       samp['rJAVA'][i,0] - samp['iJAVA'][i,0],
-                       samp['zJAVA'][i,0] - samp['iJAVA'][i,0],
-                       samp['zJAVA'][i,0] - samp['J0861'][i,0],
-                       samp['gJAVA'][i,0] - samp['rJAVA'][i,0]])
+                       samp['iJAVA'][i,0] - samp['J0660'][i,0]])
+#                       samp['rJAVA'][i,0] - samp['iJAVA'][i,0],
+#                       samp['zJAVA'][i,0] - samp['iJAVA'][i,0],
+#                       samp['zJAVA'][i,0] - samp['J0861'][i,0],
+#                       samp['gJAVA'][i,0] - samp['rJAVA'][i,0]])
 
 
-
-  return Colors_samp
+  if namefeatures:
+    names = ['r - J0660','i - J0660']#,'r - i','z - i','z - J0861','g - r']
+    return Colors_samp, names
+  else:
+    return Colors_samp
   
 
 def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier', Plot = True, Scale = True):
@@ -271,14 +274,15 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
                     'SVC'                       : svm.SVC(),
                     'L1 logistic'               : LogisticRegression(C=C, penalty='l1'),
                     'L2 logistic (OvR)'         : LogisticRegression(C=C, penalty='l2'),
-                    'L2 logistic (Multinomial)' : LogisticRegression(C=C, solver='lbfgs',multi_class='multinomial'),
-                    'GPC'                       : GaussianProcessClassifier(kernel)
+                    'L2 logistic (Multinomial)' : LogisticRegression(C=C, solver='lbfgs',multi_class='multinomial')
+                    #'GPC'                       : GaussianProcessClassifier(kernel)
                     }
 
     nclass = float(len(classifiers))
     mlcolors = plt.cm.Set1(np.linspace(0.,1,nclass))
 
     predict = {}
+    classarr = {}
     fig, ax = plt.subplots()
   
     for index, (name, classifier) in enumerate(classifiers.items()):
@@ -298,7 +302,7 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
         totlines_classifier[il]   = np.float(len(np.where(y_pred == linename[il])[0]))/nelgs
 
       predict[name] = y_pred
-
+      classarr[name] = classifier
       if Plot:
         width   = 0.35
     
@@ -314,7 +318,7 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
   
   
     plt.savefig('learn_elgs.pdf',bbox_inches='tight')
-  return predict
+  return predict, classarr
 
    
   

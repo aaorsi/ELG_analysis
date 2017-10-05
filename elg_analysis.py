@@ -162,10 +162,10 @@ if GetTrainSet:
   allspec, photo_spec = learn.LoadSample(tfout,overwrite=OverwriteTrainSet,sdssxjplus=True)
   subtrain, zzlist, namelist = learn.apply_condition(photo_spec, allspec,rjlim = rjlim, ijlim = ijlim)
   
-  Colors_train = learn.prepare_sample(subtrain)
-  Colors_test  = learn.prepare_sample(gal_elgs)
+  Colors_train                = learn.prepare_sample(subtrain)
+  Colors_test, namefeatures   = learn.prepare_sample(gal_elgs,namefeatures=True)
 
-  elgs_learn_arr  = learn.learning_elgs(Colors_train, namelist, Colors_test, EstimatorType = 'Classifier')
+  elgs_learn_arr, classdic  = learn.learning_elgs(Colors_train, namelist, Colors_test, EstimatorType = 'Classifier')
 
   zphot_train = elg.get_elg_photoz(subtrain,overwrite=False)
 
@@ -178,15 +178,62 @@ if GetTrainSet:
   plt.ylim([0,1])
   plt.savefig('photoz_zspec.pdf',bbox_inches='tight')
 
-  plt.figure(555)
- 
-  gs = gsc.GridSpec(2,2)
-  gs.update(wspace=0.0,hspace=0.0)
 
+  linelist = np.unique(namelist)
+  nlines = len(linelist)
+  nalg   = len(elgs_learn_arr.keys())
+  nfeat  = len(Colors_train[0])
 
-  ax = pl.subplot(gs[0,0])
+  # Colour-colour mesh to compute probabilities
+
+  colmin = -2
+  colmax =  2
+
+  xx = np.linspace(colmin,colmax,100)
+  yy = np.linspace(colmin,colmax,100).T
+
+  xx, yy = np.meshgrid(xx, yy)
+  Xfull = np.c_[xx.ravel(), yy.ravel()]
 
   
+  classnames = classdic.keys()
+  for i in range(nfeat):  # a plot for each feature (colour
+    
+    gs = gsc.GridSpec(nalg,nlines)
+    gs.update(wspace=0.0,hspace=0.0)
+    plt.figure(22*(i+1))
+ 
+    for ix in range(nlines):
+      ixt = np.where(np.array(namelist) == linelist[ix])[0]
+      for iy in range(nalg):
+        classifier = classdic[classnames[iy]]
+        if hasattr(classifier,'decision_function'):
+          prob = classifier.decision_function(Xfull)
+        else:
+          prob = classifier.predict_proba(Xfull)
+
+        ax = plt.subplot(gs[iy,ix])
+        
+        colx = np.array(Colors_train)[ixt,i]
+        coly = np.array(Colors_train)[ixt,i+1] if i < nfeat-1 else np.array(Colors_train)[ixt,0]
+
+        namex = namefeatures[i]
+        namey = namefeatures[i+1] if i < nfeat-1 else namefeatures[0]
+
+        ax.scatter(colx,coly,marker='o',c='k')
+        ax.set_ylabel(classnames[iy])
+        imshow_handle = ax.imshow(prob[:,ix].reshape((100,100)),origin='lower',extent=(colmin,colmax,colmin,colmax))
+
+  
+    axx = plt.axes([0.15,0.04,0.7,0.05])
+    plt.colorbar(imshow_handle, orientation='horizontal',cax=axx)
+    
+    plt.show()
+
+  
+  
+  
+
 
 
 
