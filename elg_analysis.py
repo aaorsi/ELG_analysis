@@ -24,12 +24,12 @@ matplotlib.rcParams['figure.figsize'] = (12,10)
 
 #### Options #####
 
-LoadELGs        = True   # Overrides ELG generation, and reads it from a python file.
+LoadELGs        = False   # Overrides ELG generation, and reads it from a python file.
 fout = '%s/out/elgs.dat' % elgdir
 
 
 AddedPlots      = False  # Plot added stuff
-LoadCatalogues  = False  # Should be true most of the time
+LoadCatalogues  = True  # Should be true most of the time
 PlotComposite   = False
 ZpLephare       = False  # Recalibrate zero points using Lephare
 FindXMatches    = False  # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
@@ -72,9 +72,9 @@ if LoadCatalogues:
                                                  object_name="allELGs", nchunks=10, mag_limit=[16,24],
                                                 extra_where_conds=mag_excess,db='test3')
 
-  gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,24])
-  gal_phsdss  = jplus.datasets.fetch_sdss_photgalaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,22])
-  gal_eboss = jplus.datasets.fetch_eboss_galaxies(mag_type="modelMags", overwrite=False,mag_limit=[16,24])
+  gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", overwrite=True,mag_limit=[16,24])
+  gal_phsdss  = jplus.datasets.fetch_sdss_photgalaxies(mag_type="aperMags", overwrite=True,mag_limit=[16,22])
+  gal_eboss = jplus.datasets.fetch_eboss_galaxies(mag_type="modelMags", overwrite=True,mag_limit=[16,24])
 
   for dset in [gal_jplus, gal_eboss]:
       for ifilter in jplus.datasets.jplus_filter_names():
