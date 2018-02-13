@@ -1,11 +1,11 @@
 
 import os
-jplusdir = '/home/CEFCA/aaorsi/work/j-plus/'
+#jplusdir = '/home/CEFCA/aaorsi/work/j-plus/'
 elgdir   = os.getcwd()
 
 import sys
-sys.path.append(jplusdir)
-os.chdir(jplusdir)
+#sys.path.append(jplusdir)
+#os.chdir(jplusdir)
 
 import jplus
 import numpy as np
@@ -36,13 +36,13 @@ FindXMatches    = False  # Cross-match J-PLUS with SDSS, eBOSS targets, etc.
 UseSDSSBB       = False  # Use SDSS Broad band filters instead of J-PLUS
 PlotColCol      = False  # Plot the colour-colour selection of ELG candidates
 PlotColMags     = False  # Plot color-magnitude diagrams
-MakeELGsel      = False  # Create an ELG selection
+MakeELGsel      = True  # Create an ELG selection
 GetPhotoz       = False   # Get photometric redshifts with LePhare
 ComputeTwoP     = False  # Compute the angular correlation function of the catalogue
 
 BrowseObjImages = False  # Opens a browser with the object image of each candidate
 
-GetTrainSet     = True
+GetTrainSet     = False
 OverwriteTrainSet = False
 EstimatorType   = 'Classifier'  #Regression [it uses zspec] or Classifier [linename] 
 
@@ -70,11 +70,11 @@ if LoadCatalogues:
   mag_excess = "AND (m.MAG_APER_3_0[jplus::rSDSS]- m.MAG_APER_3_0[jplus::J0660]) > 0"
   gal_jplus = jplus.datasets.fetch_jplus_objects(mag_type="aperMags", overwrite=False, 
                                                  object_name="allELGs", nchunks=10, mag_limit=[16,24],
-                                                extra_where_conds=mag_excess,db='test3')
+                                                extra_where_conds=mag_excess,db='upad')
 
-  gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", overwrite=True,mag_limit=[16,24])
-  gal_phsdss  = jplus.datasets.fetch_sdss_photgalaxies(mag_type="aperMags", overwrite=True,mag_limit=[16,22])
-  gal_eboss = jplus.datasets.fetch_eboss_galaxies(mag_type="modelMags", overwrite=True,mag_limit=[16,24])
+  gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,24])
+  gal_phsdss  = jplus.datasets.fetch_sdss_photgalaxies(mag_type="aperMags", overwrite=False,mag_limit=[16,22])
+  gal_eboss = jplus.datasets.fetch_eboss_galaxies(mag_type="modelMags", overwrite=False,mag_limit=[16,24])
 
   for dset in [gal_jplus, gal_eboss]:
       for ifilter in jplus.datasets.jplus_filter_names():
@@ -137,10 +137,10 @@ if PlotColCol and LoadELGs == False:
   add_muse=False)
   """
 
-ijlim = 0.25
-rjlim = 0.25
+ijlim = 0.40
+rjlim = 0.40
 if MakeELGsel and LoadELGs is False:
-  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim,makeplot=False)  
+  gal_elgs = elg.make_selection(gal_jplus,ijlim = ijlim, rjlim = rjlim)  
 
   
   with open(fout,'wb') as outfile:

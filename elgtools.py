@@ -12,6 +12,22 @@ import jplus
 import misc 
 
 
+def haversine_dist(ra1, dec1, ra2, dec2):
+  th1 = np.pi/2. - dec1 * np.pi/180.0
+  th2 = np.pi/2. - dec2 * np.pi/180.0
+
+  ph1 = ra1 * np.pi/180.0
+  ph2 = ra2 * np.pi/180.0
+
+  dph = np.abs(ph1 - ph2)
+  dth = np.abs(th1 - th2)
+
+  harg = np.sin(dph/2)**2 + np.cos(ph1)*np.cos(ph2) * np.sin(dth/2.)**2
+
+  return 2 *np.arcsin(np.sqrt(harg)) * 180./np.pi  # Return distance in degrees
+
+
+
 def make_sel_sigma(gal_jplus,jarr):
 # construct a sigma curve to get rid of objects dominated by colour terms consistent with noise.
 
@@ -26,7 +42,6 @@ def make_sel_sigma(gal_jplus,jarr):
   ij_err = np.sqrt(gal_jplus['iJAVA'][:,1]**2 + gal_jplus['J0660'][:,1]**2)
   mean_rj = np.mean(rj)
   mean_ij = np.mean(ij)
-  tol = 0.1
   sigma2_col_rj = np.zeros(nbins)
   sigma2_col_ij = np.zeros(nbins)
   for i in range(nbins):
@@ -44,7 +59,8 @@ def make_sel_sigma(gal_jplus,jarr):
 
   return sigmarj, sigmaij
 
-def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit = 5.0,ij8lim = -10,cstar_max = .9,makeplot = False):
+def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit = 5.0,
+ij8lim = -10,cstar_max = 1.0,makeplot = False):
 
 # Create a list of ELG candidates from gal_jplus.
 # by_tile: means that this is performed for each tile independently, considering the SNR and errors of each tile.  Otherwise it is 
@@ -53,7 +69,7 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
 # ij8min      : limit on i - j0861, which could help too. Default to -10
 # snr_min : minimum SNR of the NB filter.
   
-  nbins = 20
+  nbins = 25
   jarr = np.linspace(16,24,nbins)
   jbin = jarr[1] - jarr[0]
   
@@ -94,17 +110,17 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
       jmin = mag_snr(snr_limit)
 
     
-    icand = np.where((rj > rjlim) & (ij > ijlim)
-            & (rj > sigmarj(j)) & (ij > sigmaij(j)) &
+    icand = np.where((rj > rjlim) #& (ij > ijlim)
+             & (rj > sigmarj(j)) & (ij > sigmaij(j)) &
             (sn > snr_limit) & (ij8 > ij8lim)
             & (cstar < cstar_max))[0]
    
     ncand = len(icand)
-    print 'mag for snr %f: %f. candidates in tile %d: %d' % (snr_limit,jmin,tile_i,ncand)
+    #print 'mag for snr %f: %f. candidates in tile %d: %d' % (snr_limit,jmin,tile_i,ncand)
 
-    if makeplot and npp < 25:
+    if makeplot and npp < 4:
       print ix, iy
-      gs = gsc.GridSpec(5,5)
+      gs = gsc.GridSpec(2,2)
       gs.update(wspace=0.0,hspace=0.0)
       
       ax = plt.subplot(gs[ix,iy])
@@ -121,20 +137,21 @@ def make_selection(gal_jplus, by_tile = True, ijlim = 0.6, rjlim = 0.6,snr_limit
 #      axarr[0].set_xlabel('J0660',fontsize=10)
 #      axarr[0].set_ylabel('r - J0660',fontsize=10)
 
-      iy = iy + 1 if ix == 4 else iy + 0 
-      ix = ix + 1 if ix < 4 else 0
+      iy = iy + 1 if ix == 1 else iy + 0 
+      ix = ix + 1 if ix < 1 else 0
       npp += 1
     
-    if npp == 25 and makeplot:
-      plt.savefig('colmag.png',bbox_inches='tight')
-      import pdb ; pdb.set_trace()
+    if npp == 4 and makeplot:
+      plt.show()
+#      plt.savefig('colmag.png',bbox_inches='tight')
+#      import pdb ; pdb.set_trace()
     
     if ncand > 0:
       kcount[kk:kk+ncand] = idseltile[icand]  # From tile it, candidates icand
       kk += ncand
    
 
-  
+  print 'Total Number of candidates: %ld ' % kk 
   gal_cand = jplus.tools.select_object(gal_jplus,kcount[0:kk])
   return gal_cand
  
@@ -282,7 +299,7 @@ add_muse = True, add_composite=True, add_sdsszline = True):
   return ijlim,rjlim
 
 
-def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec',getz=True):
+def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec',getz=True,max_distance=3e-4):
 # Returns a cross-match between 2 galaxy catalogues
 # zcond can receive a 2-element list specifying a redshift range to apply to gal_orig.
 # zcoord is the name of the redshift coordinate in gal_orig.
@@ -293,7 +310,7 @@ def find_xmatches(gal_orig, gal_match,zcond = None,zcoord = 'zspec',getz=True):
   else:
     galcat = gal_orig
 
-  d2,ind2 = jplus.tools.crossmatch_angular(galcat['coords'],gal_match['coords'],max_distance=3e-4)
+  d2,ind2 = jplus.tools.crossmatch_angular(galcat['coords'],gal_match['coords'],max_distance=max_distance)
   m2 = ((d2 != np.inf))
   xmatch = jplus.tools.select_object(galcat,m2)
   
