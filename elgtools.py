@@ -11,6 +11,7 @@ import numpy as np
 import jplus
 import misc 
 
+import gc
 
 def haversine_dist(ra1, dec1, ra2, dec2):
   th1 = np.pi/2. - dec1 * np.pi/180.0
@@ -495,6 +496,48 @@ def get_vvds_spec(zrange,survey = 'All',name=''):
   return specout
 
   
+def get_vipers(zrange,name='VIPERS'):
+# Returns a list of spectra from all VVDS surveys.
+
+  from astropy.io import fits
+  import glob
+
+  datadir = '/home/CEFCA/aaorsi/work/elg_jplus/spec/vipers/'
+  
+  surveyarr = ['W1', 'W4']
+
+  nsurvey = len(surveyarr)
+  specout = []
+
+  for s_i in range(nsurvey):  # loops over each survey
+    fdata = '%s/%s/VIPERS_%s_SPECTRO_PDR2.txt' % (datadir, surveyarr[s_i], surveyarr[s_i])
+    zcol = 9
+    specid, zarr = np.loadtxt(fdata,unpack=True,usecols=(2,zcol))
+    zsel = np.where((zarr >= zrange[0]) & (zarr <= zrange[1]))[0]
+    nz = len(zsel)
+
+    if nz == 0:
+      print '0 galaxies in %f<z<%f found for %s' % (zrange[0],zrange[1],surveyarr[s_i])
+      continue
+    
+    print '%d objects in VIPERS %s' % (nz, surveyarr[s_i])
+
+    for jj in range(nz):
+      specfile = '%s%s/VIPERS_%d.fits' % (datadir,surveyarr[s_i],specid[zsel[jj]])
+      with fits.open(specfile,memmap=False) as h:
+        fl = h[1].data['fluxes']
+        ww =  h[1].data['waves']
+        nww = len(ww)
+        flux = np.zeros([nww,2])
+        flux[:,0] = fl
+        specout.append({'flux': flux, 'w':ww,'z':zarr[zsel[jj]],'survey':surveyarr[s_i],
+        'file':specfile,'name':name})
+        del fl
+        del ww
+        del h
+
+
+  return specout
 
 
 
