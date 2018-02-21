@@ -1,36 +1,22 @@
 import numpy as np
 import math as math
-#from collections import OrderedDict
-#matplotlib.use('Agg')
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import matplotlib.colors as colors
-#from matplotlib.font_manager import FontProperties
-#from mpl_toolkits.mplot3d import Axes3D
-#from astropy.cosmology import *
 from astropy.cosmology import FlatLambdaCDM
 cosmo = FlatLambdaCDM(H0 = 73.0, Om0 = 0.25)
 import deepdish as dd
 from scipy.interpolate import interp1d
 import os.path
-#from astropy.coordinates import *
-from  MocksCluster import *
-from mainPlots import *
-#from matplotlib.pyplot import figure, show, rc
 
 
-plt.rc('xtick', labelsize=22.25)
-plt.rc('ytick', labelsize=22.25)
-
-nameDir_Line = '/global/users/dizquierdo/david/lgalaxies/JPLUS/JPLUS/Lines/LightCone_SA_0_'
-nameDir_Cont = '/global/users/dizquierdo/david/lgalaxies/JPLUS/JPLUS/No_Lines/LightCone_SA_0_'
-
+c = 2.99792458 * 10 **18 #Angst/s
 
 Lines_Added = ['Lyalpha', 'Hbeta', 'Halpha','OII_3727','OII_3729','OIII_5007','OIII_4959',\
                'OI_6300','NII_6548','NII_6584','SII_6717','SII_6731','NeIII_3870']
 Lines_lambda_0 = np.array([1216.0, 4861.0, 6563.0, 3727.0, 3729.0, 5007.0, 4959.0\
-	                  ,6300.0, 6548.0, 6584.0, 6717.0, 6731.0, 3870.0]) # I remove the CII_158um, NII_205um lines
+                    ,6300.0, 6548.0, 6584.0, 6717.0, 6731.0, 3870.0]) # I remove the CII_158um, NII_205um lines
 
 plotdir = '/global/users/dizquierdo/david/Code_python/plots/'
 #Lines_emission = ['Halpha', 'OIII+Hbeta','OII']
@@ -54,7 +40,7 @@ def redshif_lines(x):
 
 def import_JPLUS_filters(filter2import):
         name = 'jp' + str(filter2import+1) + '_trans.dat'
-        direc = '/global/users/dizquierdo/david/CodeEmisionlines/T80Cam_JAST_TransmissionCurvesTmp_20160518//' + name
+        direc = '/home/CEFCA/aaorsi/work/elg_jplus/jdata/T80Cam_JAST_TransmissionCurvesTmp_20160518//' + name
         wl, trans, dummy1, dummy2, dummy3 = np.loadtxt(direc, unpack = True, skiprows = 1, comments = '#')
         return wl , trans
 
@@ -133,108 +119,131 @@ def app_mag(data, filname):
 # data: lightcone data
 # filname: string with filter name
 
-  ndata = 
+  name_to_num = name_to_num_function()
   nn_line_filter = name_to_num[filname]
   distance = ((data['pos'][:,0]**2 + data['pos'][:,1]**2 + data['pos'][:,2]**2)**0.5) / cosmo.h
-	dl = (1+data['redshift'])*(distance)
+  dl = (1+data['redshift'])*(distance)
 
   
-	mag = data['ObsMagDust'][:,nn_line_filter]\
-		+ 5*(np.log10(dl[:])+5) # apparent 
+  mag = data['ObsMagDust'][:,nn_line_filter]\
+    + 5*(np.log10(dl[:])+5) # apparent 
   return mag
 
 
+name_to_num = name_to_num_function()
+centers = Filters_centers()
+nFilters = 12
+
 def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS'):
   
-  name_to_num = name_to_num_function()
-  centers = Filters_centers()
   lcentre = centers[line_filter]
   nn_line_filter = name_to_num[line_filter]
   nn_broad_withline = name_to_num[broad_withline]
   nn_broad_noline = name_to_num[broad_noline]
-  nFilters = 12
   lPiv = lambdaPivot(nFilters)
-  c = 2.99792458 * 10 **18 #Angst/s
   alpha660 = alpha(nn_line_filter)
   alphai = alpha(nn_broad_noline)
   alphaR=  alpha(nn_broad_withline)
   beta660 = beta(nn_line_filter,lcentre)
   betaR = beta(nn_broad_withline,lcentre)
-	distance = ((ggL['pos'][:,0]**2 + ggL['pos'][:,1]**2 + ggL['pos'][:,2]**2)**0.5) / cosmo.h
-	dl = (1+ggL['redshift'])*(distance)
 
-	mag_line            = app_mag(ggC, line_filter)
-	mag_broad_withline  = app_mag(ggC, broad_withline)
+  mag_line            = app_mag(ggC, line_filter)
+  mag_broad_withline  = app_mag(ggC, broad_withline)
   mag_broad_noline    = app_mag(ggC, broad_noline)
 
-	Fr   = (10**(-0.4*(mag_broad_withline + 48.6)))*c/(lPiv[nn_broad_withline]**2) # erg/s cm2 A
-	Fi   = (10**(-0.4*(mag_broad_noline + 48.6)))*c/(lPiv[nn_broad_noline]**2) # erg/s cm2 A
-	F660 = (10**(-0.4*(mag_line + 48.6)))*c/(lPiv[nn_line_filter]**2) # erg/s cm2 A
+  Fr   = (10**(-0.4*(mag_broad_withline + 48.6)))*c/(lPiv[nn_broad_withline]**2) # erg/s cm2 A
+  Fi   = (10**(-0.4*(mag_broad_noline + 48.6)))*c/(lPiv[nn_broad_noline]**2) # erg/s cm2 A
+  F660 = (10**(-0.4*(mag_line + 48.6)))*c/(lPiv[nn_line_filter]**2) # erg/s cm2 A
 
-	Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
-	M = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
-	N = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
-	Fcont = (M * lcentre) + N # erg / s cm2 A
-	Fcont = (lPiv[nn_line_filter]**2/c) * Fcont  # erg / s cm2 Hz
-	
-	mag_Cont_3FM = -2.5*np.log10(Fcont) - 48.6
-	
-	dm3FM = mag_Cont_3FM - mag_line
+  Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
+  M = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
+  N = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
+  Fcont = (M * lcentre) + N # erg / s cm2 A
+  Fcont = (lPiv[nn_line_filter]**2/c) * Fcont  # erg / s cm2 Hz
+  
+  mag_Cont_3FM = -2.5*np.log10(Fcont) - 48.6
+  
+  dm3FM = mag_Cont_3FM - mag_line
 
-	return dm3FM
+  return dm3FM
+
+def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
+  lPiv = lambdaPivot(nFilters)
+  lcentre = centers[LineFilterName]
+  alpha660 = alpha(name_to_num[LineFilterName])
+  alphai = alpha(name_to_num[Broad_LineName])
+  alphaR=  alpha(name_to_num[Broad_NoLineName])
+  beta660 = beta(name_to_num[LineFilterName],lcentre)
+  betaR = beta(name_to_num[Broad_NoLineName],lcentre)
+
+  Fr   = (10**(-0.4*(broad_line + 48.6)))*c/(lPiv[name_to_num[Broad_LineName]]**2) # erg/s cm2 A
+  Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[Broad_NoLineName]]**2) # erg/s cm2 A
+  F660 = (10**(-0.4*(linemag + 48.6)))*c/(lPiv[name_to_num[LineFilterName]]**2) # erg/s cm2 A
+
+  Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
+  M = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
+  N = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
+  Fcont = (M * lcentre) + N # erg / s cm2 A
+  Fcont *= (lPiv[name_to_num[LineFilterName]]**2/c) # erg / s cm2 Hz
+  
+  mag_Cont_3FM = -2.5*np.log10(Fcont) - 48.6
+  
+  dm3FM = mag_Cont_3FM - linemag
+
+  return dm3FM
 
 
 def Three_FM(ggC,ggL,ancho_sin_contaminar = 'iSDSS'):
-	########################################################## 
-	# This function given a galaxy with lines ggL and a galaxy
-	# without lines and with an auxiliar filter retrieves the
-	# estimated cont and the true one
-	########################################################## 
+  ########################################################## 
+  # This function given a galaxy with lines ggL and a galaxy
+  # without lines and with an auxiliar filter retrieves the
+  # estimated cont and the true one
+  ########################################################## 
 
-	name_to_num = name_to_num_function()
-        centers = Filters_centers()
-        estrecho = 'J0660'
-        ancho_contaminado = 'rSDSS'
-	lcentre = centers[estrecho]
-        nn_estrecho = name_to_num[estrecho]
-        nn_ancho_contaminado = name_to_num[ancho_contaminado]
-        nn_ancho_sin_contaminar = name_to_num[ancho_sin_contaminar]
-        nFilters = 12
-        lPiv = lambdaPivot(nFilters)
-        c = 2.99792458 * 10 **18 #Angst/s
-        alpha660 = alpha(nn_estrecho)
-        alphai = alpha(nn_ancho_sin_contaminar)
-        alphaR=  alpha(nn_ancho_contaminado)
-        beta660 = beta(nn_estrecho,lcentre)
-        betaR = beta(nn_ancho_contaminado,lcentre)
-	distance = ((ggL['pos'][:,0]**2 + ggL['pos'][:,1]**2 + ggL['pos'][:,2]**2)**0.5) / cosmo.h
-	dl = (1+ggL['redshift'])*(distance)
+  name_to_num = name_to_num_function()
+  centers = Filters_centers()
+  estrecho = 'J0660'
+  ancho_contaminado = 'rSDSS'
+  lcentre = centers[estrecho]
+  nn_estrecho = name_to_num[estrecho]
+  nn_ancho_contaminado = name_to_num[ancho_contaminado]
+  nn_ancho_sin_contaminar = name_to_num[ancho_sin_contaminar]
+  nFilters = 12
+  lPiv = lambdaPivot(nFilters)
+  c = 2.99792458 * 10 **18 #Angst/s
+  alpha660 = alpha(nn_estrecho)
+  alphai = alpha(nn_ancho_sin_contaminar)
+  alphaR=  alpha(nn_ancho_contaminado)
+  beta660 = beta(nn_estrecho,lcentre)
+  betaR = beta(nn_ancho_contaminado,lcentre)
+  distance = ((ggL['pos'][:,0]**2 + ggL['pos'][:,1]**2 + ggL['pos'][:,2]**2)**0.5) / cosmo.h
+  dl = (1+ggL['redshift'])*(distance)
 
-	ggC['ObsMagDust'][:,nn_estrecho] = ggC['ObsMagDust'][:,nn_estrecho]\
-		+ 5*(np.log10(dl[:])+5) # apparent 
-	ggL['ObsMagDust'][:,nn_estrecho] = ggL['ObsMagDust'][:,nn_estrecho]\
-			 + 5*(np.log10(dl[:])+5) # apparent
-	ggL['ObsMagDust'][:,nn_ancho_contaminado] = ggL['ObsMagDust'][:,nn_ancho_contaminado]\
-				 + 5*(np.log10(dl[:])+5) # apparent 
-	ggL['ObsMagDust'][:,nn_ancho_sin_contaminar] = ggL['ObsMagDust'][:,nn_ancho_sin_contaminar]\
-				 + 5*(np.log10(dl[:])+5) # apparent 
+  ggC['ObsMagDust'][:,nn_estrecho] = ggC['ObsMagDust'][:,nn_estrecho]\
+    + 5*(np.log10(dl[:])+5) # apparent 
+  ggL['ObsMagDust'][:,nn_estrecho] = ggL['ObsMagDust'][:,nn_estrecho]\
+       + 5*(np.log10(dl[:])+5) # apparent
+  ggL['ObsMagDust'][:,nn_ancho_contaminado] = ggL['ObsMagDust'][:,nn_ancho_contaminado]\
+         + 5*(np.log10(dl[:])+5) # apparent 
+  ggL['ObsMagDust'][:,nn_ancho_sin_contaminar] = ggL['ObsMagDust'][:,nn_ancho_sin_contaminar]\
+         + 5*(np.log10(dl[:])+5) # apparent 
 
-	Fr = (10**(-0.4*(ggL['ObsMagDust'][:,nn_ancho_contaminado] + 48.6)))\
-				*c/(lPiv[nn_ancho_contaminado]**2) # erg/s cm2 A
-	Fi = (10**(-0.4*(ggL['ObsMagDust'][:,nn_ancho_sin_contaminar] + 48.6)))\
-				*c/(lPiv[nn_ancho_sin_contaminar]**2) # erg/s cm2 A
-	F660 = (10**(-0.4*(ggL['ObsMagDust'][:,nn_estrecho] + 48.6)))\
-				*c/(lPiv[nn_estrecho]**2) # erg/s cm2 A
-	Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
-	M = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
-	N = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
-	Fcont = (M * lcentre) + N # erg / s cm2 A
-	Fcont = (lPiv[nn_estrecho]**2/c) * Fcont  # erg / s cm2 Hz
-	mag_Line = ggL['ObsMagDust'][:,nn_estrecho]
-	mag_Cont_3FM = -2.5*np.log10(Fcont) - 48.6
-	mag_Cont_SAM = ggC['ObsMagDust'][:,nn_estrecho]
-	
-	dm3FM = mag_Cont_3FM - mag_Line
-	dmSAM = mag_Cont_SAM - mag_Line
+  Fr = (10**(-0.4*(ggL['ObsMagDust'][:,nn_ancho_contaminado] + 48.6)))\
+        *c/(lPiv[nn_ancho_contaminado]**2) # erg/s cm2 A
+  Fi = (10**(-0.4*(ggL['ObsMagDust'][:,nn_ancho_sin_contaminar] + 48.6)))\
+        *c/(lPiv[nn_ancho_sin_contaminar]**2) # erg/s cm2 A
+  F660 = (10**(-0.4*(ggL['ObsMagDust'][:,nn_estrecho] + 48.6)))\
+        *c/(lPiv[nn_estrecho]**2) # erg/s cm2 A
+  Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
+  M = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
+  N = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
+  Fcont = (M * lcentre) + N # erg / s cm2 A
+  Fcont = (lPiv[nn_estrecho]**2/c) * Fcont  # erg / s cm2 Hz
+  mag_Line = ggL['ObsMagDust'][:,nn_estrecho]
+  mag_Cont_3FM = -2.5*np.log10(Fcont) - 48.6
+  mag_Cont_SAM = ggC['ObsMagDust'][:,nn_estrecho]
+  
+  dm3FM = mag_Cont_3FM - mag_Line
+  dmSAM = mag_Cont_SAM - mag_Line
 
-	return dm3FM, dmSAM
+  return dm3FM, dmSAM
