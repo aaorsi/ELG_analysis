@@ -127,6 +127,63 @@ def Filters_centers():
         return name_to_center
 
 
+
+def app_mag(data, filname):
+# Compute apparent magnitudes from lightcone input
+# data: lightcone data
+# filname: string with filter name
+
+  ndata = 
+  nn_line_filter = name_to_num[filname]
+  distance = ((data['pos'][:,0]**2 + data['pos'][:,1]**2 + data['pos'][:,2]**2)**0.5) / cosmo.h
+	dl = (1+data['redshift'])*(distance)
+
+  
+	mag = data['ObsMagDust'][:,nn_line_filter]\
+		+ 5*(np.log10(dl[:])+5) # apparent 
+  return mag
+
+
+def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS'):
+  
+  name_to_num = name_to_num_function()
+  centers = Filters_centers()
+  lcentre = centers[line_filter]
+  nn_line_filter = name_to_num[line_filter]
+  nn_broad_withline = name_to_num[broad_withline]
+  nn_broad_noline = name_to_num[broad_noline]
+  nFilters = 12
+  lPiv = lambdaPivot(nFilters)
+  c = 2.99792458 * 10 **18 #Angst/s
+  alpha660 = alpha(nn_line_filter)
+  alphai = alpha(nn_broad_noline)
+  alphaR=  alpha(nn_broad_withline)
+  beta660 = beta(nn_line_filter,lcentre)
+  betaR = beta(nn_broad_withline,lcentre)
+	distance = ((ggL['pos'][:,0]**2 + ggL['pos'][:,1]**2 + ggL['pos'][:,2]**2)**0.5) / cosmo.h
+	dl = (1+ggL['redshift'])*(distance)
+
+	mag_line            = app_mag(ggC, line_filter)
+	mag_broad_withline  = app_mag(ggC, broad_withline)
+  mag_broad_noline    = app_mag(ggC, broad_noline)
+
+	Fr   = (10**(-0.4*(mag_broad_withline + 48.6)))*c/(lPiv[nn_broad_withline]**2) # erg/s cm2 A
+	Fi   = (10**(-0.4*(mag_broad_noline + 48.6)))*c/(lPiv[nn_broad_noline]**2) # erg/s cm2 A
+	F660 = (10**(-0.4*(mag_line + 48.6)))*c/(lPiv[nn_line_filter]**2) # erg/s cm2 A
+
+	Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
+	M = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
+	N = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
+	Fcont = (M * lcentre) + N # erg / s cm2 A
+	Fcont = (lPiv[nn_line_filter]**2/c) * Fcont  # erg / s cm2 Hz
+	
+	mag_Cont_3FM = -2.5*np.log10(Fcont) - 48.6
+	
+	dm3FM = mag_Cont_3FM - mag_line
+
+	return dm3FM
+
+
 def Three_FM(ggC,ggL,ancho_sin_contaminar = 'iSDSS'):
 	########################################################## 
 	# This function given a galaxy with lines ggL and a galaxy
