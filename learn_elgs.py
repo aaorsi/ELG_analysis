@@ -69,11 +69,12 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
       #muse_spec   = elg.get_musewide_spec(zr,name=linename[il])
       eboss_spec  = elg.get_eboss_spec(zr,name=linename[il])
       vvds_spec   = elg.get_vvds_spec(zr,name=linename[il])
+      vipers_spec = elg.get_vipers(zr,name=linename[il])
 
       #nmuse   = len(muse_spec)
       neboss  = len(eboss_spec)
       nvvds   = len(vvds_spec)
-
+      nvipers = len(vipers_spec)
       #for im in range(nmuse):
       #  allspec.append(muse_spec[im])
 
@@ -82,7 +83,9 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
         
       for im in range(nvvds):
         allspec.append(vvds_spec[im])
-
+      
+      for im in range(nvipers):
+        allspec.append(vipers_spec[im])
     
     nall = len(allspec)
     print '%d spectra from all surveys' % nall
@@ -98,7 +101,7 @@ def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', lin
     # Adding jplus magnitudes of xmatches with SDSS spectra
       print 'Loading SDSS-SpecObj and JPLUS catalogues ...'
       gal_sdss  = jplus.datasets.fetch_sdss_galaxies(mag_type="aperMags", 
-      overwrite=False,mag_limit=[16,24])
+      overwrite=True,mag_limit=[16,24],nchunks=10)
       
       mag_excess = "AND (m.MAG_APER_3_0[jplus::rSDSS]- m.MAG_APER_3_0[jplus::J0660]) > 0"
       gal_jplus = jplus.datasets.fetch_jplus_objects(mag_type="aperMags", overwrite=False, 

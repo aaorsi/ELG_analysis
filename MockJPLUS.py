@@ -168,13 +168,13 @@ def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS
   return dm3FM
 
 def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
-  lPiv = lambdaPivot(nFilters)
-  lcentre = centers[LineFilterName]
-  alpha660 = alpha(name_to_num[LineFilterName])
-  alphai = alpha(name_to_num[Broad_LineName])
-  alphaR=  alpha(name_to_num[Broad_NoLineName])
-  beta660 = beta(name_to_num[LineFilterName],lcentre)
-  betaR = beta(name_to_num[Broad_NoLineName],lcentre)
+  lPiv      = lambdaPivot(nFilters)
+  lcentre   = centers[LineFilterName]
+  alpha660  = alpha(name_to_num[LineFilterName])
+  alphai    = alpha(name_to_num[Broad_NoLineName])
+  alphaR    = alpha(name_to_num[Broad_LineName])
+  beta660   = beta(name_to_num[LineFilterName],lcentre)
+  betaR     = beta(name_to_num[Broad_LineName],lcentre)
 
   Fr   = (10**(-0.4*(broad_line + 48.6)))*c/(lPiv[name_to_num[Broad_LineName]]**2) # erg/s cm2 A
   Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[Broad_NoLineName]]**2) # erg/s cm2 A

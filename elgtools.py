@@ -1,7 +1,7 @@
 # Many routines to analyse ELGs with J-PLUS datas 
 
-import sys
-sys.path.append('/home/CEFCA/aaorsi/work/j-plus/')
+#import sys
+#sys.path.append('/home/CEFCA/aaorsi/work/j-plus/')
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gsc
@@ -111,8 +111,8 @@ ij8lim = -10,cstar_max = 1.0,makeplot = False):
       jmin = mag_snr(snr_limit)
 
     
-    icand = np.where((rj > rjlim) #& (ij > ijlim)
-             & (rj > sigmarj(j)) & (ij > sigmaij(j)) &
+    icand = np.where(#(rj < rjlim) #& (ij > ijlim)
+            # (rj > sigmarj(j)) & (ij > sigmaij(j)) &
             (sn > snr_limit) & (ij8 > ij8lim)
             & (cstar < cstar_max))[0]
    
@@ -126,7 +126,8 @@ ij8lim = -10,cstar_max = 1.0,makeplot = False):
       
       ax = plt.subplot(gs[ix,iy])
       ax.plot(gal_tile['J0660'][:,0],gal_tile['rJAVA'][:,0]-gal_tile['J0660'][:,0],',',color='gray')
-      ax.plot(gal_tile['J0660'][icand,0],gal_tile['rJAVA'][icand,0]-gal_tile['J0660'][icand,0],'.',color='royalblue')
+      ax.plot(gal_tile['J0660'][icand,0],gal_tile['rJAVA'][icand,0]-gal_tile['J0660'][icand,0],
+      '.',color='royalblue')
       ax.plot(jarr,sigmarj(jarr),color='red',linewidth=2)
 
       ax.set_ylim([-0.49,2.99])
@@ -135,17 +136,12 @@ ij8lim = -10,cstar_max = 1.0,makeplot = False):
       if iy > 0:
         ax.set_yticklabels([])
         
-#      axarr[0].set_xlabel('J0660',fontsize=10)
-#      axarr[0].set_ylabel('r - J0660',fontsize=10)
-
       iy = iy + 1 if ix == 1 else iy + 0 
       ix = ix + 1 if ix < 1 else 0
       npp += 1
     
     if npp == 4 and makeplot:
       plt.show()
-#      plt.savefig('colmag.png',bbox_inches='tight')
-#      import pdb ; pdb.set_trace()
     
     if ncand > 0:
       kcount[kk:kk+ncand] = idseltile[icand]  # From tile it, candidates icand
