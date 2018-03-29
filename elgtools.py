@@ -112,7 +112,7 @@ ij8lim = -10,cstar_max = 1.0,makeplot = False):
 
     
     icand = np.where(#(rj < rjlim) #& (ij > ijlim)
-            # (rj > sigmarj(j)) & (ij > sigmaij(j)) &
+            (rj > sigmarj(j)) & (ij > sigmaij(j)) &
             (sn > snr_limit) & (ij8 > ij8lim)
             & (cstar < cstar_max))[0]
    

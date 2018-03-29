@@ -134,6 +134,7 @@ name_to_num = name_to_num_function()
 centers = Filters_centers()
 nFilters = 12
 
+lPiv      = lambdaPivot(nFilters)
 def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS'):
   
   lcentre = centers[line_filter]
@@ -150,7 +151,6 @@ def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS
   mag_line            = app_mag(ggC, line_filter)
   mag_broad_withline  = app_mag(ggC, broad_withline)
   mag_broad_noline    = app_mag(ggC, broad_noline)
-
   Fr   = (10**(-0.4*(mag_broad_withline + 48.6)))*c/(lPiv[nn_broad_withline]**2) # erg/s cm2 A
   Fi   = (10**(-0.4*(mag_broad_noline + 48.6)))*c/(lPiv[nn_broad_noline]**2) # erg/s cm2 A
   F660 = (10**(-0.4*(mag_line + 48.6)))*c/(lPiv[nn_line_filter]**2) # erg/s cm2 A
@@ -168,7 +168,6 @@ def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS
   return dm3FM
 
 def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
-  lPiv      = lambdaPivot(nFilters)
   lcentre   = centers[LineFilterName]
   alpha660  = alpha(name_to_num[LineFilterName])
   alphai    = alpha(name_to_num[Broad_NoLineName])
@@ -191,6 +190,86 @@ def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_Lin
   dm3FM = mag_Cont_3FM - linemag
 
   return dm3FM
+
+
+def gen_3fm_err(linemag, narrow_err, broad_line, broad_line_err, broad_noline, broad_noline_err, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
+# Use error propagation to estimate errors in delta_m 
+  
+  lcentre   = centers[LineFilterName]
+  alpha660  = alpha(name_to_num[LineFilterName])
+  alphai    = alpha(name_to_num[Broad_NoLineName])
+  alphaR    = alpha(name_to_num[Broad_LineName])
+  beta660   = beta(name_to_num[LineFilterName],lcentre)
+  betaR     = beta(name_to_num[Broad_LineName],lcentre)
+
+  K_alpha   = (alphai - alphaR) / (alpha660 - alphai)
+  K_beta    = (beta660 * K_alpha) + betaR
+  epsilon   = beta660*(1 + K_alpha)/K_beta - 1
+  rho       = 1 - beta660*K_alpha/K_beta
+
+  Fr   = (10**(-0.4*(broad_line   + 48.6)))*c/(lPiv[name_to_num[Broad_LineName  ]]**2) # erg/s cm2 A
+  Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[Broad_NoLineName]]**2) # erg/s cm2 A
+  F660 = (10**(-0.4*(linemag      + 48.6)))*c/(lPiv[name_to_num[LineFilterName  ]]**2) # erg/s cm2 A
+  
+  err_f_r   = broad_line_err   * Fr   / 1.09
+  err_f_i   = broad_noline_err * Fi   / 1.09
+  err_f_660 = narrow_err       * F660 / 1.09
+  
+  err_f_line = np.sqrt((err_f_r/K_beta)**2 + (err_f_i*((1./K_beta) + (K_alpha/K_beta)))**2 + 
+                       (K_alpha*err_f_660/K_beta)**2)
+ 
+  print 'Ka', K_alpha, 'Kb', K_beta
+  print err_f_r
+  print err_f_i
+  print err_f_660
+  print 'err_line', err_f_line
+
+  d_a = alpha660 - alphai
+  print 'd_a ', d_a
+  Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/(
+          (beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
+  M     = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
+  N     = Fi - alphai*((F660-Fi-(beta660*Fline))/(alpha660-alphai))
+  
+  err_M = np.sqrt((err_f_660/d_a)**2 + (err_f_i/d_a)**2 + (beta660*err_f_line/d_a)**2)
+  err_N = np.sqrt((alphai*err_f_660/d_a)**2 + ((1 - (alphai/d_a))*err_f_i)**2 + 
+                  (beta660*alphai*err_f_line/d_a)**2)
+  
+  # err_cont = np.sqrt((err_M*lcentre)**2 + err_N**2)
+
+#  err_cont = np.sqrt(
+#             ((lcentre - alphai)/d_a*err_f_660)**2           +  # dFcont/dF660 * s_F660
+#             ((-lcentre/d_a + (1+(alphai/d_a)))*err_f_i)**2   +  # dFcont/dFi * s_Fi
+#             ((-lcentre + alphai)*beta660/d_a*err_f_line)**2 )   # dFcont/dFline
+  
+
+  err_cont = np.abs(1./d_a) * np.sqrt(
+             (err_f_660*rho*(lcentre-alphai))**2 + 
+             (err_f_r*beta660/K_beta*(alphai-lcentre))**2 +
+             (err_f_i*epsilon*(lcentre+1-alphai))**2)
+
+
+
+
+
+  print 'Err_cont',err_cont
+  print 'ErrM', err_M
+  print 'ERRN', err_N
+
+  Fcont = (M * lcentre) + N # erg / s cm2 A
+  #Fcont *= (lPiv[name_to_num[LineFilterName]]**2/c) # erg / s cm2 Hz
+  
+  err_mag_cont = 1.09 * err_cont/Fcont
+  err_mag_line = 1.09 * err_f_line/Fline
+  
+  print 'Err mags: %f %f' % (err_mag_cont, err_mag_line)
+  err_dm = np.sqrt((err_mag_cont)**2 + (narrow_err)**2)
+  print err_dm
+
+  import ipdb ; ipdb.set_trace()
+  return err_dm
+
+
 
 
 def Three_FM(ggC,ggL,ancho_sin_contaminar = 'iSDSS'):
