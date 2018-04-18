@@ -218,14 +218,14 @@ def gen_3fm_err(linemag, narrow_err, broad_line, broad_line_err, broad_noline, b
   err_f_line = np.sqrt((err_f_r/K_beta)**2 + (err_f_i*((1./K_beta) + (K_alpha/K_beta)))**2 + 
                        (K_alpha*err_f_660/K_beta)**2)
  
-  print 'Ka', K_alpha, 'Kb', K_beta
-  print err_f_r
-  print err_f_i
-  print err_f_660
-  print 'err_line', err_f_line
+#  print 'Ka', K_alpha, 'Kb', K_beta
+#  print err_f_r
+#  print err_f_i
+#  print err_f_660
+#  print 'err_line', err_f_line
 
   d_a = alpha660 - alphai
-  print 'd_a ', d_a
+#  print 'd_a ', d_a
   Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/(
           (beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
   M     = (F660 - Fi - (beta660*Fline))/(alpha660-alphai)
@@ -252,9 +252,9 @@ def gen_3fm_err(linemag, narrow_err, broad_line, broad_line_err, broad_noline, b
 
 
 
-  print 'Err_cont',err_cont
-  print 'ErrM', err_M
-  print 'ERRN', err_N
+#  print 'Err_cont',err_cont
+#  print 'ErrM', err_M
+#  print 'ERRN', err_N
 
   Fcont = (M * lcentre) + N # erg / s cm2 A
   #Fcont *= (lPiv[name_to_num[LineFilterName]]**2/c) # erg / s cm2 Hz
@@ -262,11 +262,11 @@ def gen_3fm_err(linemag, narrow_err, broad_line, broad_line_err, broad_noline, b
   err_mag_cont = 1.09 * err_cont/Fcont
   err_mag_line = 1.09 * err_f_line/Fline
   
-  print 'Err mags: %f %f' % (err_mag_cont, err_mag_line)
+ # print 'Err mags: %f %f' % (err_mag_cont, err_mag_line)
   err_dm = np.sqrt((err_mag_cont)**2 + (narrow_err)**2)
-  print err_dm
+#  print err_dm
 
-  import ipdb ; ipdb.set_trace()
+#  import ipdb ; ipdb.set_trace()
   return err_dm
 
 
