@@ -538,7 +538,8 @@ def get_vipers(zrange,name='VIPERS'):
 
 
 
-def get_elg_photoz(gal_elgs,noJ0660 = False,overwrite = True):
+def get_elg_photoz(gal_elgs,noJ0660 = False,overwrite = True, filterflag = None, emlines=True, suffix='whatever',
+                  plot_photoz=False, gallibname='GISSEL'):
 #2) Run LePhare on JPLUS Broad-band photometry, recalibrating tile by tile
   
   matplotlib.rcParams['figure.figsize'] = (8,6)
@@ -559,39 +560,48 @@ def get_elg_photoz(gal_elgs,noJ0660 = False,overwrite = True):
   #for ifilter in jplus.datasets.jplus_filter_names():
   #    print ifilter
       #print elg_eboss[ifilter] 
+  if filterflag == 'alljplus' or filterflag is None:
+    fflag = [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
+  elif filterflag == 'bbjplus':
+    fflag =  [1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0]
+  elif filterflag == 'noJ0660':
+    fflag = [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
+  elif filterflag == 'SDSS_JPLUSBB':
+    fflag = [0,1,1,1,1,0,1,0,1,0,1,0,1,1,1,1,1,0,0,0,0]
+  else:
+    print 'filterflag not recognised. Assuming alljplus'
+    fflag = [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
 
-  allfilters = [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
-  bbfilters =  [1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0]
-  nohafilters= [1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0]
-
+    
   #elg_eboss['redshift'] = np.zeros(len(elg_eboss['rJAVA'][:,0]))
-  gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
+  #gal_elgs['redshift'] = np.zeros(len(gal_elgs['rJAVA'][:,0]))
 
   if noJ0660:
 
     Lephare_noha = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
                                  filterflag=bbfilters,
-                                 suffix='_elg_eboss',emlines=True,filename='noJ0660')
+                                 suffix='_'+suffix,emlines=True,filename='noJ0660')
 
     Lephare_noha.prepare(overwrite=True)
     jp_photoz_noha = Lephare_noha.run(overwrite=True)
 
   Lephare_all = jplus.photoz.LePhare(gal_elgs, per_tile=False, outspec=False, recalibration=False,
-                                 filterflag=allfilters,
-                                 suffix='_elg_eboss',emlines=True,filename='allfilters')
+                                 filterflag=fflag,
+                                 suffix='_'+suffix,emlines=emlines,filename='allfilters', gallibname=gallibname)
 
   Lephare_all.prepare(overwrite=overwrite)
   jp_photoz_all = Lephare_all.run(overwrite=overwrite)
 
-  if noJ0660:
-    plt.hist(jp_photoz_noha['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='No J0660')
-  
-  plt.hist(jp_photoz_all['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='red',label = 'all filters photo-z')
-  
-  plt.xlabel('redshift')
+  if plot_photoz:
+    if noJ0660:
+      plt.hist(jp_photoz_noha['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='blue',label='No J0660')
 
-  plt.legend()
-  plt.savefig('photoz.pdf',bbox_inches='tight')
+    plt.hist(jp_photoz_all['photoz'],range=[.01,.9],bins=50,alpha = 0.5,color='red',label = 'all filters photo-z')
+
+    plt.xlabel('redshift')
+
+    plt.legend()
+    plt.savefig('photoz.pdf',bbox_inches='tight')
 
   
   return jp_photoz_all
