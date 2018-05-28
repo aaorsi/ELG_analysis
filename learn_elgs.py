@@ -1,12 +1,12 @@
 # Routines to find ELGs using Machine learning algorithms 
 
 import os
-jplusdir = '/home/CEFCA/aaorsi/work/j-plus/'
-elgdir   = os.getcwd()
+#jplusdir = '/home/CEFCA/aaorsi/work/j-plus/'
+#elgdir   = os.getcwd()
 
 import sys
-sys.path.append(jplusdir)
-os.chdir(jplusdir)
+#sys.path.append(jplusdir)
+#os.chdir(jplusdir)
 
 import jplus
 import numpy as np
