@@ -23,7 +23,9 @@ spec_elg = jplus.datasets.fetch_eboss_elg_composite()
 matplotlib.rcParams['figure.figsize'] = (12,10)
 
 
-def LoadSample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False):
+
+
+def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False):
   filt = jplus.datasets.fetch_jplus_filter(filtername)
   
   if linelist == 'x': 
@@ -322,10 +324,3 @@ def learning_elgs(Traindata, Trainfeature, Testdata, EstimatorType = 'Classifier
   
     plt.savefig('learn_elgs.pdf',bbox_inches='tight')
   return predict, classarr
-
-   
-  
-  
-
-
-
