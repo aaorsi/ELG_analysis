@@ -29,6 +29,81 @@ def haversine_dist(ra1, dec1, ra2, dec2):
 
 
 
+def continuum_curve(data, tileid, sigma_threshold = 2, LineName = 'J0660', BroadLineName = 'rJAVA', BroadNoLineName='gJAVA',
+Plot=False):
+  
+  import MockJPLUS as mtools
+  from scipy import interpolate
+
+  igal = jplus.tools.select_object(data, data['tile_id'] == tileid)  # Galaxies in tile 
+
+  dm = mtools.gen_3fm(igal[LineName][:,0],  igal[BroadLineName][:,0], igal[BroadNoLineName][:,0], 
+                           Broad_NoLineName=BroadNoLineName)
+
+  dm_err = mtools.gen_3fm_err(igal[LineName][:,0], igal[LineName][:,1], 
+           igal[BroadLineName][:,0], igal[BroadLineName][:,1], 
+           igal[BroadNoLineName][:,0], igal[BroadNoLineName][:,1],
+           Broad_NoLineName=BroadNoLineName)
+
+#  med_dm = np.median(dm)
+
+  mr = [16,24]
+  bsize= 0.1
+  toldm = 0.1
+  mag_arr = np.arange(mr[0],mr[1],bsize)
+  
+  nbins = len(mag_arr)
+  
+  scurve = np.zeros(nbins)
+
+  for i in range(nbins):
+    mask = (igal[BroadLineName][:,0] > mag_arr[i] - bsize/2.) & (igal[BroadLineName][:,0] < mag_arr[i] + bsize/2.)
+    i_err = dm_err[mask]
+    med_dm = np.median(dm[mask])
+    nmask = len(i_err)
+    scurve[i] = med_dm if nmask == 0 else np.percentile(dm_err[mask], 68.0)*sigma_threshold + med_dm
+
+  
+  sfunc = interpolate.interp1d(mag_arr, scurve, fill_value = 'extrapolate')
+  #sfunc = interpolate.interp1d(mag_arr, scurve, fill_value = -1, bounds_error=False)
+
+
+  idcand = []
+  
+  for j in range(len(dm)):
+    if dm[j] >= sfunc(igal[BroadLineName][j,0]):
+      idcand.append(igal['ids'][j])
+
+  if Plot:
+    import matplotlib.pyplot as plt
+
+    Plot.plot(igal[BroadLineName][:,0], dm, 'k,')
+    m2 = np.arange(mr[0]-1, mr[1]+1, bsize)
+    Plot.plot(m2, sfunc(m2), '-',color='yellow',linewidth=2)
+    
+    for j in range(len(dm)):
+      if dm[j] >= sfunc(igal[BroadLineName][j,0]):
+        plt.plot([igal[BroadLineName][j,0], igal[BroadLineName][j,0]],[dm[j],dm[j]],'.',color='magenta', markersize=2)
+
+    Plot.set_xlim([m2[0], m2[-1]])
+    Plot.set_ylim([-0.49,2])
+    Plot.text(0.1,0.75,'Tile:%d'%tileid,fontsize=12,transform=Plot.transAxes)
+    
+
+
+  return idcand
+
+
+
+
+
+
+
+
+
+
+
+
 def make_sel_sigma(gal_jplus,jarr):
 # construct a sigma curve to get rid of objects dominated by colour terms consistent with noise.
 
