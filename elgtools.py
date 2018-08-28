@@ -38,7 +38,7 @@ Plot=False):
   igal = jplus.tools.select_object(data, data['tile_id'] == tileid)  # Galaxies in tile 
 
   dm = mtools.gen_3fm(igal[LineName][:,0],  igal[BroadLineName][:,0], igal[BroadNoLineName][:,0], 
-                           Broad_NoLineName=BroadNoLineName)
+                           Broad_NoLineName=BroadNoLineName, Broad_LineName=BroadLineName)
 
   dm_err = mtools.gen_3fm_err(igal[LineName][:,0], igal[LineName][:,1], 
            igal[BroadLineName][:,0], igal[BroadLineName][:,1], 
@@ -69,10 +69,13 @@ Plot=False):
 
 
   idcand = []
-  
+  dmcand = []
+  dmcand_err = []
   for j in range(len(dm)):
-    if dm[j] >= sfunc(igal[BroadLineName][j,0]):
+    if (dm[j] >= sfunc(igal[BroadLineName][j,0])) and (dm[j] > 0):
       idcand.append(igal['ids'][j])
+      dmcand.append(dm[j])
+      dmcand_err.append(dm_err[j])
 
   if Plot:
     import matplotlib.pyplot as plt
@@ -91,7 +94,7 @@ Plot=False):
     
 
 
-  return idcand
+  return idcand, dmcand, dmcand_err
 
 
 
