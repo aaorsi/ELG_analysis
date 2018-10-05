@@ -58,15 +58,22 @@ def readmock_chunk_PythonCut(dirname, zspace = None):
                 ngals = np.zeros(1,dtype=n)
                 fd = open(dirname,'rb')
                 ngals = np.load(fd)
-                gal = np.dtype([('Type',np.int32),('Mvir',np.float32),('pos',np.float32,3),('vel',np.float32,3),\
-                ('sfr',np.float32),('sfr_inst',np.float32),('BulgeMass',np.float32),\
-                ('DiskMass',np.float32),('Time',np.float32),('redshift',np.float32),\
-                ('BlackholeMass',np.float32),('MetalColdGas',np.float32),('ColdGas',np.float32),('MassWeightAge',np.float32),\
-                ('ObsMagDust',np.float32,12)])
+                #gal = np.dtype([('Type',np.int32),('Mvir',np.float32),('pos',np.float32,3),('vel',np.float32,3),\
+                #('sfr',np.float32),('sfr_inst',np.float32),('BulgeMass',np.float32),\
+                #('DiskMass',np.float32),('Time',np.float32),('redshift',np.float32),\
+                #('BlackholeMass',np.float32),('MetalColdGas',np.float32),('ColdGas',np.float32),('MassWeightAge',np.float32),\
+                #('ObsMagDust',np.float32,12)])
                 #gal = np.dtype([('Type',np.int32),('Mvir',np.float32),('pos',np.float32,3),('vel',np.float32,3),\
                 #('sfr',np.float32),('BulgeMass',np.float32),('DiskMass',np.float32),('Time',np.float32),('redshift',np.float32),\
                 #('mag',np.float32),('MetalColdGas',np.float32),('ColdGas',np.float32),('MassWeightAge',np.float32),\
                 #('ObsMagDust',np.float32,12)])
+                
+                # (09/18): New format for gal structure, including FOF mass:
+                gal = np.dtype([('Type',np.int32),('FOFMvir',np.float32),('pos',np.float32,3),                           ('vel',np.float32,3), ('sfr',np.float32),('sfr_inst',np.float32),                                       ('BulgeMass',np.float32),\
+                ('DiskMass',np.float32),('Mvir',np.float32),('redshift',np.float32),\
+                ('MetalColdGas',np.float32),('ColdGas',np.float32),('BlackHoleMass',np.float32),\
+                ('ObsMagDust',np.float32,12)])
+                
                 distance = np.zeros(ngals)
                 GalArr = np.zeros(ngals,dtype=gal)
                 GalArr = np.load(fd)

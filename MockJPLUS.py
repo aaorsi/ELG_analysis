@@ -168,15 +168,18 @@ def tfm(ggC, line_filter = 'J0660', broad_withline= 'rSDSS', broad_noline='iSDSS
   return dm3FM
 
 def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
+  bnln = Broad_NoLineName[0]+'SDSS' #to force SDSS names here.
+  bln = Broad_LineName[0]+'SDSS'
+
   lcentre   = centers[LineFilterName]
   alpha660  = alpha(name_to_num[LineFilterName])
-  alphai    = alpha(name_to_num[Broad_NoLineName])
-  alphaR    = alpha(name_to_num[Broad_LineName])
+  alphai    = alpha(name_to_num[bnln])
+  alphaR    = alpha(name_to_num[bln])
   beta660   = beta(name_to_num[LineFilterName],lcentre)
-  betaR     = beta(name_to_num[Broad_LineName],lcentre)
+  betaR     = beta(name_to_num[bln],lcentre)
 
-  Fr   = (10**(-0.4*(broad_line + 48.6)))*c/(lPiv[name_to_num[Broad_LineName]]**2) # erg/s cm2 A
-  Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[Broad_NoLineName]]**2) # erg/s cm2 A
+  Fr   = (10**(-0.4*(broad_line + 48.6)))*c/(lPiv[name_to_num[bln]]**2) # erg/s cm2 A
+  Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[bnln]]**2) # erg/s cm2 A
   F660 = (10**(-0.4*(linemag + 48.6)))*c/(lPiv[name_to_num[LineFilterName]]**2) # erg/s cm2 A
 
   Fline = ((Fr-Fi)-((alphaR-alphai)/(alpha660-alphai)*(F660-Fi)))/((beta660*((alphai-alphaR)/(alpha660-alphai)))+betaR)
@@ -194,21 +197,23 @@ def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_Lin
 
 def gen_3fm_err(linemag, narrow_err, broad_line, broad_line_err, broad_noline, broad_noline_err, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
 # Use error propagation to estimate errors in delta_m 
-  
+  bnln = Broad_NoLineName[0]+'SDSS' #to force SDSS names here.
+  bln = Broad_LineName[0]+'SDSS'
+ 
   lcentre   = centers[LineFilterName]
   alpha660  = alpha(name_to_num[LineFilterName])
-  alphai    = alpha(name_to_num[Broad_NoLineName])
-  alphaR    = alpha(name_to_num[Broad_LineName])
+  alphai    = alpha(name_to_num[bnln])
+  alphaR    = alpha(name_to_num[bln])
   beta660   = beta(name_to_num[LineFilterName],lcentre)
-  betaR     = beta(name_to_num[Broad_LineName],lcentre)
+  betaR     = beta(name_to_num[bln],lcentre)
 
   K_alpha   = (alphai - alphaR) / (alpha660 - alphai)
   K_beta    = (beta660 * K_alpha) + betaR
   epsilon   = beta660*(1 + K_alpha)/K_beta - 1
   rho       = 1 - beta660*K_alpha/K_beta
 
-  Fr   = (10**(-0.4*(broad_line   + 48.6)))*c/(lPiv[name_to_num[Broad_LineName  ]]**2) # erg/s cm2 A
-  Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[Broad_NoLineName]]**2) # erg/s cm2 A
+  Fr   = (10**(-0.4*(broad_line   + 48.6)))*c/(lPiv[name_to_num[bln]]**2) # erg/s cm2 A
+  Fi   = (10**(-0.4*(broad_noline + 48.6)))*c/(lPiv[name_to_num[bnln]]**2) # erg/s cm2 A
   F660 = (10**(-0.4*(linemag      + 48.6)))*c/(lPiv[name_to_num[LineFilterName  ]]**2) # erg/s cm2 A
   
   err_f_r   = broad_line_err   * Fr   / 1.09
