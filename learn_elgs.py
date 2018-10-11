@@ -25,7 +25,7 @@ matplotlib.rcParams['figure.figsize'] = (12,10)
 
 
 
-def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False):
+def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False, survey = 'all', get_sdss_filters=False, field='All'):
   filt = jplus.datasets.fetch_jplus_filter(filtername)
   
   if linelist == 'x': 
@@ -68,28 +68,34 @@ def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist
       else:
         zr = elg.zline(linelist[il],filt.wave,filt.throughput)
 
-      #muse_spec   = elg.get_musewide_spec(zr,name=linename[il])
-      eboss_spec  = elg.get_eboss_spec(zr,name=linename[il])
-      vvds_spec   = elg.get_vvds_spec(zr,name=linename[il])
-      vipers_spec = elg.get_vipers(zr,name=linename[il])
+      if survey == 'muse' or survey == 'all':
+        muse_spec   = elg.get_musewide_spec(zr,name=linename[il])
+        nmuse   = len(muse_spec)
+        for im in range(nmuse):
+          allspec.append(muse_spec[im])
 
-      #nmuse   = len(muse_spec)
-      neboss  = len(eboss_spec)
-      nvvds   = len(vvds_spec)
-      nvipers = len(vipers_spec)
-      #for im in range(nmuse):
-      #  allspec.append(muse_spec[im])
-
-      for im in range(neboss):
-        allspec.append(eboss_spec[im])
-        
-      for im in range(nvvds):
-        allspec.append(vvds_spec[im])
+      if survey == 'eBOSS' or survey == 'all':
+        eboss_spec  = elg.get_eboss_spec(zr,name=linename[il])
+        neboss  = len(eboss_spec)
+        for im in range(neboss):
+          allspec.append(eboss_spec[im])
       
-      for im in range(nvipers):
-        allspec.append(vipers_spec[im])
+      if survey == 'VVDS' or survey == 'all':
+        vvds_spec   = elg.get_vvds_spec(zr,name=linename[il],survey=field)
+        nvvds   = len(vvds_spec)
+        for im in range(nvvds):
+          allspec.append(vvds_spec[im])
+    
+      if survey == 'VIPERS' or survey == 'all':
+        vipers_spec = elg.get_vipers(zr,name=linename[il])
+        nvipers = len(vipers_spec)
+        for im in range(nvipers):
+          allspec.append(vipers_spec[im])
     
     nall = len(allspec)
+    if nall == 0:
+      print 'Zero spectra retrieved.\nPerhaps %s is not a valid survey name'% survey
+      raise 
     print '%d spectra from all surveys' % nall
     print 'Convolving spectra with J-PLUS filters...'
     photo_spec = []
@@ -97,6 +103,10 @@ def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist
 
     for i in range(nall):
       conv = jplus.datasets.compute_jplus_photometry_singlespec(allspec[i])
+      if get_sdss_filters:
+        conv2 = jplus.datasets.compute_sdss_photometry_singlespec(allspec[i])
+        conv.update(conv2)
+      
       photo_spec.append(conv)
 
     if sdssxjplus:
