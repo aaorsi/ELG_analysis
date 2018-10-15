@@ -192,7 +192,7 @@ def gen_3fm(linemag, broad_line, broad_noline, LineFilterName='J0660', Broad_Lin
   
   dm3FM = mag_Cont_3FM - linemag
 
-  return dm3FM
+  return dm3FM, Fline, Fcont
 
 
 def gen_3fm_err(linemag, narrow_err, broad_line, broad_line_err, broad_noline, broad_noline_err, LineFilterName='J0660', Broad_LineName='rSDSS',Broad_NoLineName='iSDSS'):
