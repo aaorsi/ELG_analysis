@@ -34,10 +34,11 @@ Plot=False):
   
   import MockJPLUS as mtools
   from scipy import interpolate
+  from matplotlib.colors import LogNorm
 
   igal = jplus.tools.select_object(data, data['tile_id'] == tileid)  # Galaxies in tile 
 
-  dm = mtools.gen_3fm(igal[LineName][:,0],  igal[BroadLineName][:,0], igal[BroadNoLineName][:,0], 
+  dm, fline, fcont = mtools.gen_3fm(igal[LineName][:,0],  igal[BroadLineName][:,0], igal[BroadNoLineName][:,0], 
                            Broad_NoLineName=BroadNoLineName, Broad_LineName=BroadLineName)
 
   dm_err = mtools.gen_3fm_err(igal[LineName][:,0], igal[LineName][:,1], 
@@ -66,7 +67,7 @@ Plot=False):
   
   sfunc = interpolate.interp1d(mag_arr, scurve, fill_value = 'extrapolate')
   #sfunc = interpolate.interp1d(mag_arr, scurve, fill_value = -1, bounds_error=False)
-
+  sout = [mag_arr, scurve]
 
   idcand = []
   dmcand = []
@@ -80,7 +81,12 @@ Plot=False):
   if Plot:
     import matplotlib.pyplot as plt
 
-    Plot.plot(igal[BroadLineName][:,0], dm, 'k,')
+    #Plot.plot(igal[BroadLineName][:,0], dm, 'k,')
+    counts, ybins, xbins, image = Plot.hist2d(igal[BroadLineName][:,0],dm,
+                                    bins=50, cmap=plt.cm.Greys, normed=LogNorm(), cmin=0.01, 
+                                    alpha=0.7,range=[[18,23],[-2,3]])
+
+    
     m2 = np.arange(mr[0]-1, mr[1]+1, bsize)
     Plot.plot(m2, sfunc(m2), '-',color='yellow',linewidth=2)
     
@@ -88,13 +94,13 @@ Plot=False):
       if dm[j] >= sfunc(igal[BroadLineName][j,0]):
         plt.plot([igal[BroadLineName][j,0], igal[BroadLineName][j,0]],[dm[j],dm[j]],'.',color='magenta', markersize=2)
 
-    Plot.set_xlim([m2[0], m2[-1]])
+    Plot.set_xlim([18.1, 22.9])
     Plot.set_ylim([-0.49,2])
     Plot.text(0.1,0.75,'Tile:%d'%tileid,fontsize=12,transform=Plot.transAxes)
     
 
 
-  return idcand, dmcand, dmcand_err
+  return idcand, dmcand, dmcand_err, sout
 
 
 
