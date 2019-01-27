@@ -18,7 +18,8 @@ Lines_Added = ['Lyalpha', 'Hbeta', 'Halpha','OII_3727','OII_3729','OIII_5007','O
 Lines_lambda_0 = np.array([1216.0, 4861.0, 6563.0, 3727.0, 3729.0, 5007.0, 4959.0\
                     ,6300.0, 6548.0, 6584.0, 6717.0, 6731.0, 3870.0]) # I remove the CII_158um, NII_205um lines
 
-plotdir = '/global/users/dizquierdo/david/Code_python/plots/'
+plotdir = ''
+
 #Lines_emission = ['Halpha', 'OIII+Hbeta','OII']
 
 def redshif_lines(x):
@@ -40,7 +41,7 @@ def redshif_lines(x):
 
 def import_JPLUS_filters(filter2import):
         name = 'jp' + str(filter2import+1) + '_trans.dat'
-        direc = '/home/CEFCA/aaorsi/work/elg_jplus/jdata/T80Cam_JAST_TransmissionCurvesTmp_20160518//' + name
+        direc = './jdata/T80Cam_JAST_TransmissionCurvesTmp_20160518//' + name
         wl, trans, dummy1, dummy2, dummy3 = np.loadtxt(direc, unpack = True, skiprows = 1, comments = '#')
         return wl , trans
 
