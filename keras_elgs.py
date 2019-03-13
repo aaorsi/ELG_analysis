@@ -80,9 +80,9 @@ def build_classifier(optim='sgd',drop=0.0,Neurons=5,init='uniform',lambd=0.0):
    #   from keras.optimizers import SGD
     model = Sequential()
     model.add(Dense(Neurons, input_dim=nfeat, kernel_initializer=init, activation='relu', W_regularizer=l2(lambd)))
-    model.add(Dropout(drop))
-    model.add(Dense(Neurons, kernel_initializer=init, activation='relu', W_regularizer=l2(lambd)))
-    model.add(Dropout(drop))
+    #model.add(Dropout(drop))
+    #model.add(Dense(Neurons, kernel_initializer=init, activation='relu', W_regularizer=l2(lambd)))
+    #model.add(Dropout(drop))
     model.add(Dense(4, kernel_initializer=init, activation='relu',W_regularizer=l2(lambd)))
     # Compile model
     model.compile(loss='sparse_categorical_crossentropy', optimizer=optim, metrics=['accuracy'])
@@ -102,7 +102,7 @@ dropout = [0]#1e-3,1e-2,1e-1]#,0.5,0.75]
 Neurons = [20]
 param_grid = dict(optim=optim, epochs=epochs, batch_size=batches, init=init, lambd=lambd,drop=dropout,
                  Neurons=Neurons)
-grid = GridSearchCV(estimator=model, param_grid=param_grid,n_jobs=-1) #scoring='f1_macro',n_jobs=-1)
+grid = GridSearchCV(estimator=model, param_grid=param_grid,n_jobs=-1,scoring='f1_macro')
 grid_result = grid.fit(x_train, y_train_int)
 
 best= grid_result.best_estimator_
@@ -117,13 +117,13 @@ print  'F1_Scores for best estimator'
 print f1_score(np.asarray(y_train_int),np.asarray(y_pred),average=None)
 
 import pandas as pd
-
 df = grid_result.cv_results_
 # summarize results
 print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
 means = grid_result.cv_results_['mean_test_score']
 stds = grid_result.cv_results_['std_test_score']
 params = grid_result.cv_results_['params']
+
 for mean, stdev, param in zip(means, stds, params):
     print("%f (%f) with: %r" % (mean, stdev, param))
 

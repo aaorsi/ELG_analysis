@@ -19,13 +19,15 @@ import elgtools as elg
 import pickle
 
 jplus.plotting.setup_text_plots(fontsize=10,usetex=True)
-spec_elg = jplus.datasets.fetch_eboss_elg_composite()
+#spec_elg = jplus.datasets.fetch_eboss_elg_composite()
 matplotlib.rcParams['figure.figsize'] = (12,10)
 
 
 
 
-def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False, survey = 'all', get_sdss_filters=False, field='All'):
+def Load_Synthetic_Sample(tfout, overwrite=False, filtername = 'J0660', linelist = 'x', linename = 'x',sdssxjplus = False,zrange=False, 
+survey = 'all', get_sdss_filters=False, field='All'):
+  
   filt = jplus.datasets.fetch_jplus_filter(filtername)
   
   if linelist == 'x': 
