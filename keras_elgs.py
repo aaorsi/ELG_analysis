@@ -7,6 +7,7 @@ from keras.optimizers import SGD
 import numpy as np
 import jplus
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 import pickle
 
 #load databases
@@ -16,12 +17,19 @@ dset = pickle.load(open('dataset.data'))
 print dset.keys()
 print
 
-x_train = np.asarray(dset['tfeatures'])
-y_train = np.asarray(dset['tclass'])
-x_test = np.asarray(dset['vfeatures'])
-y_test    = np.asarray(dset['vclass'])
+training_features = np.asarray(dset['tfeatures'])
+training_class    = np.asarray(dset['tclass'])
+test_features     = np.asarray(dset['vfeatures'])
+test_class        = np.asarray(dset['vclass'])
 
-print np.unique(y_train)
+
+x_train, x_test, y_train, y_test = train_test_split(
+training_features, training_class, test_size=0.1, random_state=None)  # leave out 10% out for test/validation, whatever that's called
+
+
+print 'Unique classes in training set: ',np.unique(y_train)
+print 'Number of objects in training set:', len(y_train)
+
 
 Scaledata = True
 if Scaledata:
@@ -44,9 +52,9 @@ def class_to_int(istr):
     if istr == 'Halpha':
         return 0
     if istr == 'OII':
-        return 1
-    elif istr == 'OIII+Hbeta':
         return 2
+    elif istr == 'OIII+Hbeta':
+        return 1
     elif istr == 'contaminant':
         return 3
     else:
@@ -54,7 +62,7 @@ def class_to_int(istr):
         return -99
 
 
-y_train_int = [class_to_int(x) for x in y_train]
+y_train_int = np.asarray([class_to_int(x) for x in y_train])
 y_test_int = [class_to_int(x) for x in y_test]
 
 
@@ -97,20 +105,24 @@ optim = ['sgd']#,'adam']#,'rmsprop','sgd'] #['rmsprop', 'adam']
 init = ['uniform']#['glorot_uniform', 'normal', 'uniform']
 epochs = [10]#,20]
 batches = [200]#,200,500]#,500]#, 500]
-lambd   = [1e-3,1e-2,1e-1]#,5e-3,1e-3]
+lambd   = [1e-3,1e-2]#,1e-1]#,5e-3,1e-3]
 dropout = [0]#1e-3,1e-2,1e-1]#,0.5,0.75]
 Neurons = [20]
 param_grid = dict(optim=optim, epochs=epochs, batch_size=batches, init=init, lambd=lambd,drop=dropout,
                  Neurons=Neurons)
 grid = GridSearchCV(estimator=model, param_grid=param_grid,n_jobs=-1,scoring='f1_macro')
-grid_result = grid.fit(x_train, y_train_int)
+grid_result = grid.fit(np.asarray(x_train), y_train_int)
 
 best= grid_result.best_estimator_
 print grid_result.best_params_
 print best.get_params()
 print grid_result.scorer_
 print grid_result.best_score_
-y_pred = best.predict(x_train)
+y_pred = best.predict(x_train, verbose=1)
+if len(np.unique(y_pred)) <  4:
+  print 'something is wrong with the classification in y_pred, check it out'
+  print 'unique labels predicted:',np.unique(y_pred)
+
 from sklearn.metrics import f1_score
 
 print  'F1_Scores for best estimator'
