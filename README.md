@@ -18,6 +18,7 @@ In addition, make sure you have the following packages installed:
 - numpy
 - matplotlib
 - scipy
+- astropy
 
 The machine learning analysis requires the following packages:
 
@@ -27,9 +28,13 @@ The machine learning analysis requires the following packages:
 
 ## Examples
 
-`3D-HSTxJ-PLUS.ipynb`:
+`Keras_class.ipynb`. This notebook loads a catalogue of ELGs to train a deep-learning sequential neural network with *Keras*. To scan for the best set of parameters, the code performs a Cross-validation Grid search using `scikit-learn`.
 
-This notebook performs a cross-match between J-PLUS data and that from the 3D-HST project over the AEGIS field. The result can be used to study the optical properties (given by J-PLUS) of Near-Infrared, grism selected objects by 3D-HST.
+`3D-HSTxJ-PLUS.ipynb`. This notebook performs a cross-match between J-PLUS data and that from the 3D-HST project over the AEGIS field. The result can be used to study the optical properties (given by J-PLUS) of Near-Infrared, grism selected objects by 3D-HST.
+
+`ELG_stacked.ipynb`. This notebook stacks J-PLUS objects with a given selection over the regions corresponding to *RedMAPPER* clusters within a given redshift range. The stack of objects around clusters in a narrow redshift range around *z~0.3* should include the contribution of Emission-line galaxies at that redshift.
+
+
 
 
 
