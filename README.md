@@ -3,11 +3,11 @@
 ## Table of contents
 * [Description](#description)
 * [Dependencies](#dependencies)
-* [Detailed description](#detailed_description)
+* [Examples](#examples)
 
 ## Description
 
-This repository contains a number of routines written as `Python` scripts and `jupyter` notebooks. Overall, all routines are used to select objects in the *J-PLUS* database, and classify them as *Emission-line galaxies*. A number of tools are used to achieve this end, including routines to write and retreive data from `SQL` queries, the Machine learning library `scikit-learn` and the Deep-learning package `Keras`.
+This repository contains a number of routines written as `Python` scripts and `jupyter` notebooks. Overall, all routines are used to select objects in the *J-PLUS* database, classify them as *Emission-line galaxies* and perform some analysis over them. A number of tools are used to achieve this end, including routines to write and retreive data from `SQL` queries, the Machine learning library `scikit-learn` and the Deep-learning package `Keras`.
 
 ## Dependencies
 
@@ -25,6 +25,11 @@ The machine learning analysis requires the following packages:
 - [Keras](https://keras.io/)
 - [TensorFlow](https://www.tensorflow.org/)
 
-## Detailed description
+## Examples
+
+`3D-HSTxJ-PLUS.ipynb`:
+
+This notebook performs a cross-match between J-PLUS data and that from the 3D-HST project over the AEGIS field. The result can be used to study the optical properties (given by J-PLUS) of Near-Infrared, grism selected objects by 3D-HST.
+
 
 
