@@ -34,7 +34,7 @@ The machine learning analysis requires the following packages:
 
 [ELG_stacked.ipynb](https://github.com/aaorsi/ELG_analysis/blob/master/py/ELG_stacked.ipynb). This notebook stacks J-PLUS objects with a given selection over the regions corresponding to *RedMAPPER* clusters within a given redshift range. The stack of objects around clusters in a narrow redshift range around *z~0.3* should include the contribution of Emission-line galaxies at that redshift.
 
-
+[OIII_OII.ipynb](https://github.com/aaorsi/ELG_analysis/blob/master/py/OIII_OII.ipynb). This notebook selects candidates displaying both the OII and OIII lines, to stack their UV continuum in search for Lyc emission (work in progress)
 
 
 
