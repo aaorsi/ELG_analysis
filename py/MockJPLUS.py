@@ -41,7 +41,7 @@ def redshif_lines(x):
 
 def import_JPLUS_filters(filter2import):
         name = 'jp' + str(filter2import+1) + '_trans.dat'
-        direc = './jdata/T80Cam_JAST_TransmissionCurvesTmp_20160518//' + name
+        direc = '../jdata/T80Cam_JAST_TransmissionCurvesTmp_20160518//' + name
         wl, trans, dummy1, dummy2, dummy3 = np.loadtxt(direc, unpack = True, skiprows = 1, comments = '#')
         return wl , trans
 
