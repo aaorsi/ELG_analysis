@@ -79,16 +79,16 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout
 from keras.regularizers import l2
 
-def build_classifier(optim='sgd',drop=0.0,Neurons=5,init='uniform',lambd=0.0):
+def build_classifier(optim='sgd',drop=0.0,Neurons=nfeat,init='uniform'):
    #   from keras.optimizers import SGD
     model = Sequential()
-    model.add(Dense(Neurons, input_dim=nfeat, kernel_initializer=init, activation='sigmoid', W_regularizer=l2(lambd)))
-    model.add(Dropout(drop))
-    model.add(Dense(Neurons, kernel_initializer=init, activation='sigmoid', W_regularizer=l2(lambd)))
-    model.add(Dropout(drop))
-    model.add(Dense(4, kernel_initializer=init, activation='sigmoid',W_regularizer=l2(lambd)))
+    model.add(Dense(Neurons, input_dim=nfeat, kernel_initializer=init, activation='relu'))
+#    model.add(Dropout(drop))
+#    model.add(Dense(Neurons, kernel_initializer=init, activation='sigmoid'))
+#    model.add(Dropout(drop))
+    model.add(Dense(4, kernel_initializer=init, activation='relu'))
     # Compile model
-    model.compile(loss='sparse_categorical_crossentropy', optimizer=optim, metrics=['accuracy'])
+    model.compile(loss='sparse_categorical_crossentropy', optimizer=optim)
     return model
 
 seed = 7
@@ -98,32 +98,39 @@ model = KerasClassifier(build_fn=build_classifier, verbose=0)
 
 optim = ['sgd']#,'adam']#,'rmsprop','sgd'] #['rmsprop', 'adam']
 init = ['uniform']#['glorot_uniform', 'normal', 'uniform']
-epochs = [10,20]
-batches = [200]#,200,500]#,500]#, 500]
-lambd   = [0]#,1e-1]#,5e-3,1e-3]
-dropout = [0,.1]#1e-3,1e-2,1e-1]#,0.5,0.75]
-Neurons = [20]
-param_grid = dict(optim=optim, epochs=epochs, batch_size=batches, init=init, lambd=lambd,drop=dropout,
+epochs = [1000, 5000]
+batches = [500]#,200,500]#,500]#, 500]
+dropout = [.1]#1e-3,1e-2,1e-1]#,0.5,0.75]
+Neurons = [nfeat,nfeat/2]
+param_grid = dict(optim=optim, epochs=epochs, batch_size=batches, init=init,drop=dropout,
                  Neurons=Neurons)
-grid = GridSearchCV(estimator=model, param_grid=param_grid,n_jobs=-1,scoring='f1_macro')
-grid_result = grid.fit(np.asarray(x_train), y_train_int)
+
+
+from sklearn.metrics import make_scorer, fbeta_score,f1_score
+
+# pos_label below optimises the f score for a particular label
+f2_score = make_scorer(fbeta_score, beta=1,average='macro') 
+grid = GridSearchCV(estimator=model, param_grid=param_grid,scoring=f2_score,verbose=10)
+grid_result = grid.fit(x_train, y_train_int)
 
 best= grid_result.best_estimator_
-print grid_result.best_params_
-print best.get_params()
-print grid_result.scorer_
-print grid_result.best_score_
+
+#print grid_result.best_params_
+#print best.get_params()
+#print grid_result.scorer_
+#print grid_result.best_score_
+
 y_pred = best.predict(x_train, verbose=1)
+
 if len(np.unique(y_pred)) <  4:
   print 'something is wrong with the classification in y_pred, check it out'
   print 'unique labels predicted:',np.unique(y_pred)
 
-from sklearn.metrics import f1_score
 
 print  'F1_Scores for best estimator'
 print f1_score(np.asarray(y_train_int),np.asarray(y_pred),average=None)
 
-import pandas as pd
+#import pandas as pd
 df = grid_result.cv_results_
 # summarize results
 print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
@@ -135,4 +142,5 @@ for mean, stdev, param in zip(means, stds, params):
     print("%f (%f) with: %r" % (mean, stdev, param))
 
 
+print best.predict_proba(x_train,verbose=10)
 
