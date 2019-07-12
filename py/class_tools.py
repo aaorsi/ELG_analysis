@@ -31,7 +31,6 @@ def CV_split(data, kfold, ith, binary_class = None):
 # kfold: k-fold CV. (e.g. kfold = 5 splits dataset into 5 folds)
 # ith  : return ith k-fold as test, the rest as training.
 
-
     new_train = {}
     test_set = {}
     for k in data.keys():
@@ -43,22 +42,24 @@ def CV_split(data, kfold, ith, binary_class = None):
     else:
         classes = np.unique(data['class'])
 
-    print classes
     for ic in classes:
 
-        if binary_class == 'OII' and ic != 'OII':
+        if binary_class == 'OII':
+          if ic != 'OII':
             sel = np.where(data['class'] != 'OII')[0]
-        else:
+          else:
             sel = np.where(data['class'] == 'OII')[0]
+        else:
+          sel = np.where(data['class'] == ic)[0]
+
 
         nsel = len(sel)
-        ntest = int(nsel*test_frac)
-        ntrain = nsel - ntest
-        fold_size = int(sel/kfold)
+        fold_size = int(nsel/kfold)
         id0 = ith*fold_size
         id1 = fold_size*(ith+1) if ith < kfold-1 else nsel-1 #last fold reaches to the end of the array to prevent numerical inaccuracies 
-        id_test = sel[id0:id1]
-        id_train = np.delete(sel, np.arange(id0,id1))
+        id_test = sel[id0:id0+id1]
+        id_train = np.delete(sel, np.arange(id0,id1+1))
+
 
         for k in test_set.keys():
             for jd in id_test:
@@ -127,7 +128,6 @@ def get_features(data):
     terms = featnames[1:] # create all colour combinations
     nterms = len(terms)
     ncomb = int(nterms*(nterms-1)/2.)
-    print 'All colours:', ncomb
     comb = list(itertools.combinations(terms,2))
     lcomb = list(comb)
     colournames = ['%s - %s'%(x[0], x[1]) for x in list(comb)]
@@ -153,7 +153,7 @@ def get_features(data):
     return feat_arr, err_arr, featnames
 
 
-def feature_importance(x_train, y_train, featnames, figsize=(20,10), n_estimators= 2000):
+def feature_importance(x_train, y_train, featnames, figsize=(20,10), n_estimators= 2000, verbose=0,Plot=False):
 
     forest = ExtraTreesClassifier(n_estimators=n_estimators,
                                   random_state=1323,n_jobs=4)
@@ -167,20 +167,21 @@ def feature_importance(x_train, y_train, featnames, figsize=(20,10), n_estimator
     inames = [r'$%s$'%featnames[x] for x in indices]
 
     # Print the feature ranking
-    print("Feature ranking:")
+    if verbose > 0: 
+      print("Feature ranking:")
 
-    for f in range(x_train.shape[1]):
+      for f in range(x_train.shape[1]):
         print("%d. feature %d (%f): %s" % (f + 1, indices[f], importances[indices[f]], inames[f]))
 
-
-    # Plot the feature importances of the forest
-    plt.figure(1, figsize=figsize)
-    plt.title("Feature importances")
-    plt.bar(range(x_train.shape[1]), importances[indices],
-           color="r", yerr=std[indices], align="center")
-    plt.xticks(range(x_train.shape[1]),inames,rotation='vertical')
-    plt.xlim([-1, x_train.shape[1]])
-    plt.show()
+    if Plot:
+      # Plot the feature importances of the forest
+      plt.figure(1, figsize=figsize)
+      plt.title("Feature importances")
+      plt.bar(range(x_train.shape[1]), importances[indices],
+             color="r", yerr=std[indices], align="center")
+      plt.xticks(range(x_train.shape[1]),inames,rotation='vertical')
+      plt.xlim([-1, x_train.shape[1]])
+      plt.show()
 
     return indices, importances[indices], inames
 
