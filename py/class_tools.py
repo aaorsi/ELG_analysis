@@ -6,16 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 def class_to_int(istr):
-    if istr == 'Halpha':
+    if istr == b'Halpha':
         return 0
-    elif istr == 'OIII+Hbeta':
+    elif istr == b'OIII+Hbeta':
         return 1
-    if istr == 'OII':
+    if istr == b'OII':
         return 2
-    elif istr == 'contaminant':
+    elif istr == b'contaminant':
         return 3
     else:
-        print '%s not recognised'%istr
+        print ('%s not recognised'%istr)
         return -99
 
 
@@ -89,7 +89,6 @@ def split_trainset(data, test_frac=0.2, binary_class = None):
     else:
         classes = np.unique(data['class'])
 
-    print classes
     for ic in classes:
 
         if binary_class == 'OII' and ic != 'OII':
@@ -147,7 +146,7 @@ def get_features(data):
         err_arr.append(ex)
     class_arr = data['class']
     featnames += colournames
-#    print featnames, len(featnames)
+    #print (featnames, len(featnames))
     nfeat = len(featnames)
 
     return feat_arr, err_arr, featnames
@@ -207,8 +206,8 @@ def resample_errors(dset, nr=10, scale_up_down = True, exclude_class = None, ref
       min_val = dset[ref_mag][sel,0].min()
       max_val = dset[ref_mag][sel,0].max()
       if verbose:
-        print 'Class %s range of %s'% (ic, ref_mag)
-        print '%.3f - %.3f'% (min_val, max_val)
+        print ('Class %s range of %s'% (ic, ref_mag))
+        print ('%.3f - %.3f'% (min_val, max_val))
 
       mag_range[ic] = [min_val, max_val, len(sel)]
 
